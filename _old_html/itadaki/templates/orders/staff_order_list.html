@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>注文確認 - 頂</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: #1a1a1a; color: #f0e6c8; font-family: sans-serif; padding-bottom: 100px; }
+    header { background: #111; border-bottom: 2px solid #c9a84c; padding: 16px 20px; display: flex; justify-content: space-between; align-items: center; }
+    header h1 { color: #c9a84c; font-size: 1.1rem; }
+    header a { color: #999; font-size: 0.85rem; text-decoration: none; }
+    .container { padding: 16px; }
+    .order-card { background: #2a2a2a; border: 2px solid #444; border-radius: 8px; margin-bottom: 16px; overflow: hidden; transition: border-color 0.2s; }
+    .order-card.selected { border-color: #c9a84c; }
+    .order-card.grouped { border-color: #4caf50; }
+    .order-header { background: #333; padding: 12px 16px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #444; }
+    .order-header-left { display: flex; align-items: center; gap: 10px; }
+    .seat-code { color: #c9a84c; font-size: 1.1rem; font-weight: bold; }
+    .group-badge { background: #4caf50; color: #fff; font-size: 0.7rem; padding: 2px 8px; border-radius: 12px; }
+    .order-time { color: #999; font-size: 0.8rem; }
+    .order-items { padding: 12px 16px; }
+    .order-item { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid #333; }
+    .order-item:last-child { border-bottom: none; }
+    .item-name { font-size: 0.95rem; }
+    .item-qty { color: #c9a84c; font-weight: bold; }
+    .status-badge { font-size: 0.75rem; padding: 2px 8px; border-radius: 12px; margin-left: 8px; }
+    .status-pending { background: #555; color: #fff; }
+    .status-cooking { background: #c9a84c; color: #111; }
+    .status-served { background: #4caf50; color: #fff; }
+    .order-footer { padding: 12px 16px; border-top: 1px solid #444; display: flex; justify-content: space-between; align-items: center; }
+    .total { color: #c9a84c; font-weight: bold; }
+    .btn { padding: 8px 16px; border: none; border-radius: 6px; font-size: 0.85rem; cursor: pointer; font-weight: bold; }
+    .btn-close { background: #e53935; color: #fff; }
+    .select-checkbox { width: 22px; height: 22px; cursor: pointer; accent-color: #c9a84c; }
+    .merge-bar { position: fixed; bottom: 0; left: 0; right: 0; background: #111; border-top: 2px solid #c9a84c; padding: 12px 16px; display: none; gap: 10px; }
+    .btn-merge { flex: 1; background: #c9a84c; color: #111; padding: 14px; border: none; border-radius: 8px; font-size: 1rem; font-weight: bold; cursor: pointer; }
+    .empty { text-align: center; color: #666; padding: 60px 20px; font-size: 1rem; }
+    .refresh-info { text-align: center; color: #555; font-size: 0.8rem; padding: 8px; }
+  </style>
+</head>
+<body>
+<header>
+  <h1>📋 注文確認</h1>
+  <a href="{% url 'reservations:staff_floor' %}">← フロアマップ</a>
+</header>
+<div class="container">
+  {% if orders %}
+    {% for order in orders %}
+    <div class="order-card {% if order.group_id %}grouped{% endif %}" id="card-{{ order.id }}">
+      <div class="order-header">
+        <div class="order-header-left">
+          <input type="checkbox" class="select-checkbox" data-order-id="{{ order.id }}" data-group-id="{{ order.group_id }}" onchange="updateSelection()">
+          <span class="seat-code">{{ order.seat_code }}</span>
+          {% if order.group_id %}<span class="group-badge">合算中</span>{% endif %}
+        </div>
+        <span class="order-time">{{ order.created_at|date:"H:i" }}</span>
+      </div>
+      <div class="order-items">
+        {% for item in order.items.all %}
+        <div class="order-item">
+          <span class="item-name">{{ item.menu_item.name }}</span>
+          <span>
+            <span class="item-qty">× {{ item.quantity }}</span>
+            <span class="status-badge status-{{ item.status }}">{{ item.get_status_display }}</span>
+          </span>
+        </div>
+        {% endfor %}
+      </div>
+      <div class="order-footer">
+        <span class="total">¥{{ order.total_price }}</span>
+        {% if order.group_id %}
+          <button class="btn btn-close" onclick="closeOrder(null, '{{ order.group_id }}')">合算で会計済み</button>
+        {% else %}
+          <button class="btn btn-close" onclick="closeOrder({{ order.id }}, '')">会計済み</button>
+        {% endif %}
+      </div>
+    </div>
+    {% endfor %}
+  {% else %}
+    <div class="empty">現在オープン中の注文はありません</div>
+  {% endif %}
+</div>
+<div class="refresh-info">30秒ごとに自動更新</div>
+<div class="merge-bar" id="merge-bar">
+  <button class="btn-merge" onclick="mergeOrders()">選択した席を合算する</button>
+</div>
+<script>
+  const csrfToken = '{{ csrf_token }}';
+  let selectedIds = [];
+  function updateSelection() {
+    selectedIds = Array.from(document.querySelectorAll('.select-checkbox:checked')).map(cb => parseInt(cb.dataset.orderId));
+    document.querySelectorAll('.order-card').forEach(card => card.classList.remove('selected'));
+    selectedIds.forEach(id => document.getElementById('card-' + id)?.classList.add('selected'));
+    document.getElementById('merge-bar').style.display = selectedIds.length >= 2 ? 'flex' : 'none';
+  }
+  function mergeOrders() {
+    if (selectedIds.length < 2) return;
+    fetch("{% url 'orders:staff_order_merge' %}", {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken },
+      body: JSON.stringify({ order_ids: selectedIds }),
+    }).then(res => res.json()).then(data => { if (data.success) location.reload(); });
+  }
+  function closeOrder(orderId, groupId) {
+    const msg = groupId ? '合算分をまとめて会計済みにしますか？' : 'この席を会計済みにしますか？';
+    if (!confirm(msg)) return;
+    fetch("{% url 'orders:staff_order_close' %}", {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken },
+      body: JSON.stringify({ order_id: orderId, group_id: groupId }),
+    }).then(res => res.json()).then(data => { if (data.success) location.reload(); });
+  }
+  setTimeout(() => location.reload(), 30000);
+</script>
+</body>
+</html>

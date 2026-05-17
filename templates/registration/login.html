@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>スタッフログイン｜頂</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #1a1a1a;
+      font-family: 'Hiragino Kaku Gothic ProN', 'メイリオ', sans-serif;
+    }
+
+    .card {
+      background: #111;
+      border: 1px solid #b8860b;
+      border-radius: 12px;
+      padding: 48px 40px;
+      width: 100%;
+      max-width: 400px;
+      box-shadow: 0 0 40px rgba(184,134,11,0.15);
+    }
+
+    .logo {
+      text-align: center;
+      margin-bottom: 32px;
+    }
+    .logo h1 {
+      color: #b8860b;
+      font-size: 28px;
+      letter-spacing: 4px;
+    }
+    .logo p {
+      color: #888;
+      font-size: 13px;
+      margin-top: 6px;
+      letter-spacing: 2px;
+    }
+
+    .form-group {
+      margin-bottom: 20px;
+    }
+    label {
+      display: block;
+      color: #ccc;
+      font-size: 13px;
+      margin-bottom: 8px;
+      letter-spacing: 1px;
+    }
+    input[type="text"],
+    input[type="password"] {
+      width: 100%;
+      padding: 12px 16px;
+      background: #222;
+      border: 1px solid #444;
+      border-radius: 6px;
+      color: #fff;
+      font-size: 16px;
+      transition: border-color 0.2s;
+    }
+    input:focus {
+      outline: none;
+      border-color: #b8860b;
+    }
+
+    .btn-login {
+      width: 100%;
+      padding: 14px;
+      background: #b8860b;
+      color: #fff;
+      border: none;
+      border-radius: 6px;
+      font-size: 16px;
+      font-weight: bold;
+      letter-spacing: 2px;
+      cursor: pointer;
+      margin-top: 8px;
+      transition: background 0.2s;
+    }
+    .btn-login:hover {
+      background: #d4a017;
+    }
+
+    .error {
+      background: #3a1a1a;
+      border: 1px solid #c0392b;
+      border-radius: 6px;
+      padding: 12px 16px;
+      color: #e74c3c;
+      font-size: 13px;
+      margin-bottom: 20px;
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="logo">
+      <h1>頂</h1>
+      <p>STAFF LOGIN</p>
+    </div>
+
+    {% if form.errors %}
+    <div class="error">
+      ユーザー名またはパスワードが正しくありません。
+    </div>
+    {% endif %}
+
+    <form method="post">
+      {% csrf_token %}
+      <div class="form-group">
+        <label for="id_username">ユーザー名</label>
+        <input type="text" name="username" id="id_username" autofocus required>
+      </div>
+      <div class="form-group">
+        <label for="id_password">パスワード</label>
+        <input type="password" name="password" id="id_password" required>
+      </div>
+      <button type="submit" class="btn-login">ログイン</button>
+    </form>
+  </div>
+</body>
+</html>

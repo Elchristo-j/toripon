@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>予約登録（スタッフ用）｜{{ store.name }}</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    body { background: #f8f9fa; }
+    .card { border: none; border-radius: 12px; box-shadow: 0 2px 12px rgba(0,0,0,.08); }
+    .section-title {
+      font-size: .75rem; font-weight: 700; letter-spacing: .08em;
+      color: #6c757d; text-transform: uppercase;
+      border-bottom: 2px solid #e9ecef; padding-bottom: .25rem; margin-bottom: 1rem;
+    }
+    .seat-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap: .5rem; }
+    .seat-label {
+      display: flex; align-items: center; gap: .4rem;
+      padding: .4rem .6rem; border: 1px solid #dee2e6; border-radius: 8px;
+      cursor: pointer; font-size: .875rem; transition: background .15s, border-color .15s;
+    }
+    .seat-label:hover { background: #f0f4ff; }
+    input[type=checkbox]:checked + .seat-label { background: #e7f0ff; border-color: #4f8ef7; }
+    .staff-memo-section { background: #fff8e1; border-left: 4px solid #ffc107; }
+  </style>
+</head>
+<body>
+  <nav class="navbar navbar-dark bg-dark mb-0">
+    <div class="container" style="max-width:900px;">
+      <a class="navbar-brand fw-bold" href="/reservations/staff/list/">🍶 頂</a>
+      <div class="d-flex gap-2">
+        <a href="/reservations/staff/new/" class="btn btn-sm btn-outline-light">＋ 予約登録</a>
+        <a href="/reservations/staff/list/" class="btn btn-sm btn-outline-light">📅 一覧</a>
+        <a href="/reservations/staff/floor/" class="btn btn-sm btn-outline-light">🗺 フロア</a>
+        <a href="/orders/staff/" class="btn btn-sm btn-outline-light">📋 注文</a>
+      </div>
+    </div>
+  </nav>
+
+<div class="container py-4" style="max-width: 760px;">
+
+  <div class="d-flex align-items-center gap-3 mb-4">
+    <h1 class="h5 mb-0 fw-bold">📋 予約登録 <span class="text-muted fw-normal fs-6">スタッフ専用</span></h1>
+  </div>
+
+  {% for msg in messages %}
+    <div class="alert alert-{{ msg.tags }} alert-dismissible fade show">
+      {{ msg }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+  {% endfor %}
+
+  <form method="post" novalidate>
+    {% csrf_token %}
+
+    {% if form.non_field_errors %}
+      <div class="alert alert-danger">{{ form.non_field_errors }}</div>
+    {% endif %}
+
+    {# 予約経路 #}
+    <div class="card mb-3 p-4">
+      <p class="section-title">予約経路</p>
+      <div class="col-md-6">
+        <label class="form-label fw-semibold">{{ form.channel.label }}</label>
+        {{ form.channel }}
+        {% if form.channel.errors %}<div class="text-danger small mt-1">{{ form.channel.errors.0 }}</div>{% endif %}
+      </div>
+    </div>
+
+    {# 来店情報 #}
+    <div class="card mb-3 p-4">
+      <p class="section-title">来店情報</p>
+      <div class="row g-3">
+        <div class="col-md-5">
+          <label class="form-label fw-semibold">{{ form.visit_date.label }} <span class="text-danger">*</span></label>
+          {{ form.visit_date }}
+          {% if form.visit_date.errors %}<div class="text-danger small mt-1">{{ form.visit_date.errors.0 }}</div>{% endif %}
+        </div>
+        <div class="col-md-4">
+          <label class="form-label fw-semibold">{{ form.visit_time.label }} <span class="text-danger">*</span></label>
+          {{ form.visit_time }}
+          {% if form.visit_time.errors %}<div class="text-danger small mt-1">{{ form.visit_time.errors.0 }}</div>{% endif %}
+        </div>
+        <div class="col-md-3">
+          <label class="form-label fw-semibold">{{ form.party_size.label }} <span class="text-danger">*</span></label>
+          <div class="input-group">{{ form.party_size }}<span class="input-group-text">名</span></div>
+          {% if form.party_size.errors %}<div class="text-danger small mt-1">{{ form.party_size.errors.0 }}</div>{% endif %}
+        </div>
+      </div>
+      <div class="alert alert-warning py-2 px-3 mt-3 mb-0" style="font-size:.85rem;">
+        ⚠️ 定休日：月曜日（祝日の場合は翌火曜日休み）
+      </div>
+    </div>
+
+    {# コース #}
+    <div class="card mb-3 p-4">
+      <p class="section-title">コース</p>
+      <label class="form-label fw-semibold">{{ form.course.label }}</label>
+      {{ form.course }}
+      <div class="form-text mt-1" id="course-hint"></div>
+    </div>
+
+    {# 席の割り当て #}
+    <div class="card mb-3 p-4">
+      <p class="section-title">席の割り当て <span class="fw-normal text-secondary">(任意・複数可)</span></p>
+      {% for section_name, seat_list in seats_by_section.items %}
+        <p class="fw-semibold mb-2 mt-3" style="font-size:.9rem;">{{ section_name }}</p>
+        <div class="seat-grid mb-2">
+          {% for seat in seat_list %}
+            <div>
+              <input type="checkbox" name="seats" value="{{ seat.pk }}" id="seat_{{ seat.pk }}"
+                     class="visually-hidden"
+                     >
+              <label for="seat_{{ seat.pk }}" class="seat-label">🪑 {{ seat.code }}</label>
+            </div>
+          {% endfor %}
+        </div>
+      {% empty %}
+        <p class="text-muted small">席データがありません。</p>
+      {% endfor %}
+    </div>
+
+    {# 連絡先 #}
+    <div class="card mb-3 p-4">
+      <p class="section-title">お客様連絡先</p>
+      <div class="row g-3">
+        <div class="col-12">
+          <label class="form-label fw-semibold">{{ form.guest_name.label }} <span class="text-danger">*</span></label>
+          {{ form.guest_name }}
+          {% if form.guest_name.errors %}<div class="text-danger small mt-1">{{ form.guest_name.errors.0 }}</div>{% endif %}
+        </div>
+        <div class="col-md-6">
+          <label class="form-label fw-semibold">{{ form.guest_phone.label }}</label>
+          {{ form.guest_phone }}
+        </div>
+        <div class="col-md-6">
+          <label class="form-label fw-semibold">{{ form.guest_email.label }}</label>
+          {{ form.guest_email }}
+        </div>
+        <div class="col-12">
+          <label class="form-label fw-semibold">{{ form.notes.label }}</label>
+          {{ form.notes }}
+        </div>
+      </div>
+    </div>
+
+    {# スタッフメモ #}
+    <div class="card mb-4 p-4 staff-memo-section">
+      <p class="section-title">スタッフメモ（お客様非表示）</p>
+      {{ form.staff_memo }}
+    </div>
+
+    <div class="d-flex gap-2 justify-content-end">
+      <button type="submit" class="btn btn-primary px-5 fw-bold">予約を登録する</button>
+    </div>
+
+  </form>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+  const PRICES = {
+    '':        '',
+    'drink':   '2,500円（曜日共通）',
+    'okinari': '日〜木 4,500円 ／ 金・土 5,000円',
+    'awa':     '日〜木 5,500円 ／ 金・土 6,000円',
+    'itadaki': '日〜木 6,500円 ／ 金・土 7,000円',
+  };
+  const sel = document.getElementById('id_course');
+  const hint = document.getElementById('course-hint');
+  if (sel) {
+    sel.addEventListener('change', () => hint.textContent = PRICES[sel.value] || '');
+  }
+</script>
+</body>
+</html>

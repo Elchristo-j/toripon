@@ -1,0 +1,38 @@
+from django import forms
+from .models import Reservation, Seat
+
+class ReservationForm(forms.ModelForm):
+    seats = forms.ModelMultipleChoiceField(
+        queryset=Seat.objects.filter(is_active=True),
+        widget=forms.CheckboxSelectMultiple,
+        label="席を選ぶ",
+    )
+
+    class Meta:
+        model = Reservation
+        fields = [
+            'guest_name',
+            'guest_phone',
+            'party_size',
+            'start_at',
+            'end_at',
+            'channel',
+            'notes',
+        ]
+        labels = {
+            'guest_name': 'お名前',
+            'guest_phone': '電話番号',
+            'party_size': '人数',
+            'start_at': '来店日時',
+            'end_at': '退席予定日時',
+            'channel': '予約経路',
+            'notes': '備考',
+        }
+        widgets = {
+            'start_at': forms.DateTimeInput(
+                attrs={'type': 'datetime-local'}
+            ),
+            'end_at': forms.DateTimeInput(
+                attrs={'type': 'datetime-local'}
+            ),
+        }

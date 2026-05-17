@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ご予約 | 阿波居酒屋 頂</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: sans-serif; background: #f5f5f5; padding: 20px; }
+        .card { max-width: 540px; margin: 0 auto; background: #fff; border-radius: 12px; overflow: hidden; box-shadow: 0 1px 4px rgba(0,0,0,0.08); }
+        .card-header { padding: 16px 20px; border-bottom: 1px solid #eee; }
+        .card-header h1 { font-size: 16px; font-weight: 500; }
+        .card-header p { font-size: 13px; color: #888; margin-top: 2px; }
+        .steps { display: flex; padding: 14px 20px; border-bottom: 1px solid #eee; gap: 0; }
+        .step { flex: 1; text-align: center; font-size: 11px; color: #aaa; position: relative; }
+        .step.active { color: #333; font-weight: 500; }
+        .step.done { color: #888; }
+        .step-num { display: block; width: 22px; height: 22px; border-radius: 50%; border: 1px solid #ddd;
+            margin: 0 auto 4px; line-height: 20px; font-size: 11px; background: #fff; }
+        .step.active .step-num { background: #333; color: #fff; border-color: #333; }
+        .step.done .step-num { background: #888; color: #fff; border-color: #888; }
+        .card-body { padding: 20px; }
+        .section { display: none; }
+        .section.active { display: block; }
+        .label { font-size: 13px; color: #888; margin-bottom: 6px; display: block; }
+        .field { margin-bottom: 18px; }
+        input[type=text], input[type=tel], input[type=email], textarea {
+            width: 100%; padding: 9px 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 15px; }
+        .row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 18px; }
+        .people { display: flex; align-items: center; gap: 14px; margin-bottom: 18px; }
+        .people button { width: 34px; height: 34px; border-radius: 50%; border: 1px solid #ddd;
+            background: #fff; font-size: 20px; cursor: pointer; }
+        .people span { font-size: 18px; font-weight: 500; min-width: 24px; text-align: center; }
+        .cal { border: 1px solid #eee; border-radius: 8px; overflow: hidden; margin-bottom: 18px; }
+        .cal-header { display: flex; align-items: center; justify-content: space-between;
+            padding: 10px 14px; background: #fafafa; border-bottom: 1px solid #eee; }
+        .cal-header span { font-size: 14px; font-weight: 500; }
+        .cal-nav { background: #fff; border: 1px solid #ddd; border-radius: 6px;
+            padding: 4px 10px; font-size: 12px; cursor: pointer; color: #555; }
+        .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); }
+        .day-label { text-align: center; font-size: 11px; color: #aaa; padding: 6px 0; }
+        .day { text-align: center; font-size: 13px; padding: 8px 4px; cursor: pointer; color: #555; }
+        .day:hover { background: #f5f5f5; border-radius: 50%; }
+        .day.today { font-weight: 500; color: #333; }
+        .day.selected { background: #333 !important; color: #fff; border-radius: 50%; }
+        .day.empty { color: #ddd; pointer-events: none; }
+        .day.past { color: #ddd; pointer-events: none; }
+        .time-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 18px; }
+        .time-btn { text-align: center; padding: 9px 0; font-size: 13px;
+            border: 1px solid #ddd; border-radius: 8px; cursor: pointer; color: #555; background: #fff; }
+        .time-btn:hover { background: #f5f5f5; }
+        .time-btn.selected { background: #333; color: #fff; border-color: #333; }
+        .course-list { margin-bottom: 18px; }
+        .course-item { border: 1px solid #eee; border-radius: 8px; padding: 14px 16px;
+            margin-bottom: 10px; cursor: pointer; position: relative; }
+        .course-item:hover { border-color: #bbb; }
+        .course-item.selected { border-color: #333; background: #fafafa; }
+        .course-name { font-size: 14px; font-weight: 500; color: #333; margin-bottom: 4px; }
+        .course-price { font-size: 13px; color: #555; }
+        .course-price s { color: #aaa; margin-right: 6px; }
+        .course-price .discount { color: #c0392b; font-size: 11px; margin-left: 6px; }
+        .course-arrow { position: absolute; right: 14px; top: 50%; transform: translateY(-50%); color: #aaa; }
+        .seat-pref { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin-bottom: 18px; }
+        .seat-pref-btn { padding: 10px; border: 1px solid #ddd; border-radius: 8px;
+            cursor: pointer; text-align: center; font-size: 13px; color: #555; background: #fff; }
+        .seat-pref-btn:hover { background: #f5f5f5; }
+        .seat-pref-btn.selected { border-color: #333; background: #f0f0f0; color: #333; font-weight: 500; }
+        .policy-box { border: 1px solid #eee; border-radius: 8px; padding: 16px; margin-bottom: 18px; font-size: 13px; color: #555; line-height: 1.7; }
+        .policy-box h3 { font-size: 14px; font-weight: 500; color: #333; margin-bottom: 10px; }
+        .policy-check { display: flex; align-items: flex-start; gap: 10px; margin-bottom: 18px; font-size: 13px; color: #555; }
+        .policy-check input { margin-top: 2px; width: 16px; height: 16px; flex-shrink: 0; }
+        .summary-box { background: #fafafa; border-radius: 8px; padding: 14px 16px; margin-bottom: 18px; font-size: 13px; }
+        .summary-row { display: flex; justify-content: space-between; padding: 4px 0; color: #555; }
+        .summary-row span:first-child { color: #888; }
+        .btn-area { display: flex; gap: 10px; margin-top: 4px; }
+        .btn-back { flex: 1; padding: 12px; background: #fff; border: 1px solid #ddd;
+            border-radius: 8px; font-size: 14px; cursor: pointer; color: #555; }
+        .btn-next { flex: 2; padding: 12px; background: #333; color: #fff;
+            border: none; border-radius: 8px; font-size: 14px; cursor: pointer; }
+        .btn-next:hover { background: #111; }
+        .btn-submit { width: 100%; padding: 13px; background: #333; color: #fff;
+            border: none; border-radius: 8px; font-size: 15px; cursor: pointer; }
+        .messages { background: #d4edda; padding: 12px 16px; margin-bottom: 16px; border-radius: 8px; font-size: 14px; }
+        .error { color: #c0392b; font-size: 12px; margin-top: 4px; }
+    </style>
+</head>
+<body>
+<div class="card">
+    <div class="card-header">
+        <h1>ご予約</h1>
+        <p>阿波居酒屋 頂</p>
+    </div>
+    <div class="steps">
+        <div class="step active" id="step-1"><span class="step-num">1</span>日時・人数</div>
+        <div class="step" id="step-2"><span class="step-num">2</span>コース</div>
+        <div class="step" id="step-3"><span class="step-num">3</span>連絡先</div>
+        <div class="step" id="step-4"><span class="step-num">4</span>確認・同意</div>
+    </div>
+    <div class="card-body">
+        {% if messages %}
+        <div class="messages">{% for message in messages %}{{ message }}{% endfor %}</div>
+        {% endif %}
+        <form method="post" id="main-form">
+            {% csrf_token %}
+            <input type="hidden" name="selected_date" id="selected_date">
+            <input type="hidden" name="selected_time" id="selected_time">
+            <input type="hidden" name="selected_course" id="selected_course">
+            <input type="hidden" name="seat_preference" id="seat_preference" value="おまかせ">
+            <input type="hidden" name="party_size" id="party_size" value="2">
+
+            <!-- ステップ1: 日時・人数 -->
+            <div class="section active" id="section-1">
+                <span class="label">人数</span>
+                <div class="people">
+                    <button type="button" onclick="changeCount(-1)">−</button>
+                    <span id="count">2</span>
+                    <button type="button" onclick="changeCount(1)">+</button>
+                    <span style="font-size:13px;color:#888;">名</span>
+                </div>
+                <span class="label">来店日</span>
+                <div class="cal">
+                    <div class="cal-header">
+                        <button type="button" class="cal-nav" onclick="prevMonth()">← 前月</button>
+                        <span id="cal-title"></span>
+                        <button type="button" class="cal-nav" onclick="nextMonth()">次月 →</button>
+                    </div>
+                    <div class="cal-grid" id="cal-grid"></div>
+                </div>
+                <span class="label">来店時間</span>
+                <div class="time-grid" id="time-grid"></div>
+                <div class="btn-area">
+                    <button type="button" class="btn-next" onclick="goStep(2)">次へ →</button>
+                </div>
+            </div>
+
+            <!-- ステップ2: コース選択 -->
+            <div class="section" id="section-2">
+                <span class="label">ご希望のコースを選択してください</span>
+                <div class="course-list" id="course-list"></div>
+                <div class="btn-area">
+                    <button type="button" class="btn-back" onclick="goStep(1)">← 戻る</button>
+                    <button type="button" class="btn-next" onclick="goStep(3)">次へ →</button>
+                </div>
+            </div>
+
+            <!-- ステップ3: 連絡先 -->
+            <div class="section" id="section-3">
+                <div class="row">
+                    <div>
+                        <span class="label">お名前 <span style="color:#c0392b;">必須</span></span>
+                        <input type="text" name="guest_name" id="guest_name" placeholder="山田 太郎">
+                    </div>
+                    <div>
+                        <span class="label">電話番号 <span style="color:#c0392b;">必須</span></span>
+                        <input type="tel" name="guest_phone" id="guest_phone" placeholder="090-0000-0000">
+                    </div>
+                </div>
+                <div class="field">
+                    <span class="label">メールアドレス <span style="color:#c0392b;">必須</span></span>
+                    <input type="email" name="guest_email" id="guest_email" placeholder="example@mail.com">
+                </div>
+                <span class="label">席のご希望</span>
+                <div class="seat-pref">
+                    <div class="seat-pref-btn selected" onclick="selectSeat('おまかせ', this)">おまかせ</div>
+                    <div class="seat-pref-btn" onclick="selectSeat('カウンター希望', this)">カウンター</div>
+                    <div class="seat-pref-btn" onclick="selectSeat('テーブル希望', this)">テーブル</div>
+                    <div class="seat-pref-btn" onclick="selectSeat('掘り炬燵希望', this)">掘り炬燵</div>
+                </div>
+                <div class="field">
+                    <span class="label">備考・ご要望</span>
+                    <textarea name="notes" rows="3" placeholder="アレルギーや特別なご要望などがあればご記入ください"></textarea>
+                </div>
+                <div class="btn-area">
+                    <button type="button" class="btn-back" onclick="goStep(2)">← 戻る</button>
+                    <button type="button" class="btn-next" onclick="goStep(4)">次へ →</button>
+                </div>
+            </div>
+
+            <!-- ステップ4: 確認・同意 -->
+            <div class="section" id="section-4">
+                <span class="label" style="margin-bottom:12px;">予約内容の確認</span>
+                <div class="summary-box">
+                    <div class="summary-row"><span>来店日時</span><span id="sum-datetime">-</span></div>
+                    <div class="summary-row"><span>人数</span><span id="sum-party">-</span></div>
+                    <div class="summary-row"><span>コース</span><span id="sum-course">-</span></div>
+                    <div class="summary-row"><span>席のご希望</span><span id="sum-seat">-</span></div>
+                    <div class="summary-row"><span>お名前</span><span id="sum-name">-</span></div>
+                    <div class="summary-row"><span>電話番号</span><span id="sum-phone">-</span></div>
+                    <div class="summary-row"><span>メール</span><span id="sum-email">-</span></div>
+                </div>
+                <div class="policy-box">
+                    <h3>キャンセルポリシー</h3>
+                    <p>・コース予約の場合：ご来店前日23時以降から、コース料金の30%（1予約あたり）が発生します。</p>
+                    <br>
+                    <p>・席のみ予約の場合：ご来店当日14時以降から、2,000円（1予約あたり）が発生します。</p>
+                    <br>
+                    <p>・人数変更は当日12時までにご連絡ください。</p>
+                </div>
+                <div class="policy-check">
+                    <input type="checkbox" id="agree" name="agree">
+                    <label for="agree">キャンセルポリシーおよび個人情報の取り扱いに同意します。</label>
+                </div>
+                <div class="btn-area">
+                    <button type="button" class="btn-back" onclick="goStep(3)">← 戻る</button>
+                    <button type="submit" class="btn-next" onclick="return checkAgree()">予約を確定する</button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+<script>
+const today = new Date();
+let current = new Date(today.getFullYear(), today.getMonth(), 1);
+let selectedDate = null;
+let selectedTime = null;
+let selectedCourse = null;
+
+const times = ['17:00','17:30','18:00','18:30','19:00','19:30','20:00','20:30','21:00','21:30'];
+
+const courses = [
+    { id: 'seat_only', name: 'お席のみのご予約', sun_thu: null, fri_sat: null },
+    { id: 'drink', name: '生ビールもOK！単品飲み放題 2時間', sun_thu: 2500, fri_sat: 2500 },
+    { id: 'casual', name: '《日〜木》当日OK！ブリたたき,阿波すだち鶏の唐揚げ等2H飲放付"お気軽コース"全8品', sun_thu: 4500, fri_sat: 5000 },
+    { id: 'awamankai', name: '阿波鮮魚お造り・阿波尾鶏の炭火竈焼き等2H飲放"阿波満喫コース"8品', sun_thu: 5500, fri_sat: 6000 },
+    { id: 'itadaki', name: '阿波鮮魚お造り、牛フィレの串焼きなど2H飲付"頂コース"全9品', sun_thu: 6500, fri_sat: 7000 },
+];
+
+function isFriSat(dateStr) {
+    if (!dateStr) return false;
+    const d = new Date(dateStr);
+    const day = d.getDay();
+    return day === 5 || day === 6;
+}
+
+function formatPrice(course, dateStr) {
+    if (!course.sun_thu) return '無料';
+    const friSat = isFriSat(dateStr);
+    if (course.sun_thu === course.fri_sat) {
+        return `${course.sun_thu.toLocaleString()}円／1名`;
+    }
+    if (friSat) {
+        return `${course.fri_sat.toLocaleString()}円／1名`;
+    }
+    return `<s style="color:#aaa;">${course.fri_sat.toLocaleString()}円</s> → ${course.sun_thu.toLocaleString()}円／1名 <span class="discount">日〜木割引</span>`;
+}
+
+function renderCourses() {
+    const list = document.getElementById('course-list');
+    list.innerHTML = '';
+    courses.forEach(c => {
+        const el = document.createElement('div');
+        el.className = 'course-item' + (selectedCourse === c.id ? ' selected' : '');
+        el.innerHTML = `<div class="course-name">${c.name}</div>
+            <div class="course-price">${formatPrice(c, selectedDate)}</div>
+            <span class="course-arrow">›</span>`;
+        el.onclick = () => {
+            selectedCourse = c.id;
+            document.getElementById('selected_course').value = c.id;
+            renderCourses();
+        };
+        list.appendChild(el);
+    });
+}
+
+function changeCount(d) {
+    const el = document.getElementById('count');
+    let n = parseInt(el.textContent) + d;
+    if (n < 1) n = 1;
+    if (n > 20) n = 20;
+    el.textContent = n;
+    document.getElementById('party_size').value = n;
+}
+
+function renderCal() {
+    const year = current.getFullYear();
+    const month = current.getMonth();
+    document.getElementById('cal-title').textContent = `${year}年${month+1}月`;
+    const grid = document.getElementById('cal-grid');
+    grid.innerHTML = '';
+    ['日','月','火','水','木','金','土'].forEach(d => {
+        const el = document.createElement('div');
+        el.className = 'day-label';
+        el.textContent = d;
+        grid.appendChild(el);
+    });
+    const first = new Date(year, month, 1).getDay();
+    for (let i = 0; i < first; i++) {
+        const el = document.createElement('div');
+        el.className = 'day empty';
+        el.textContent = '-';
+        grid.appendChild(el);
+    }
+    const days = new Date(year, month+1, 0).getDate();
+    for (let d = 1; d <= days; d++) {
+        const el = document.createElement('div');
+        const date = new Date(year, month, d);
+        const isToday = year===today.getFullYear() && month===today.getMonth() && d===today.getDate();
+        const isPast = date < new Date(today.getFullYear(), today.getMonth(), today.getDate());
+        const dateStr2 = `${year}-${String(month+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`; const closedDates = []; const isMon = date.getDay() === 1 || closedDates.includes(dateStr2);
+        
+        el.className = 'day' + (isToday?' today':'') + (isPast||isMon?' past':'') + (selectedDate===dateStr2?' selected':'');
+        el.textContent = d;
+        if (isMon) { el.style.color = '#ddd'; el.style.pointerEvents = 'none'; }
+        if (!isPast && !isMon) {
+            el.onclick = () => {
+                selectedDate = dateStr2;
+                document.getElementById('selected_date').value = dateStr2;
+                renderCal();
+                renderCourses();
+            };
+        }
+        grid.appendChild(el);
+    }
+}
+
+function renderTimes() {
+    const grid = document.getElementById('time-grid');
+    grid.innerHTML = '';
+    times.forEach(t => {
+        const el = document.createElement('div');
+        el.className = 'time-btn' + (selectedTime===t?' selected':'');
+        el.textContent = t;
+        el.onclick = () => {
+            selectedTime = t;
+            document.getElementById('selected_time').value = t;
+            renderTimes();
+        };
+        grid.appendChild(el);
+    });
+}
+
+function selectSeat(val, el) {
+    document.querySelectorAll('.seat-pref-btn').forEach(b => b.classList.remove('selected'));
+    el.classList.add('selected');
+    document.getElementById('seat_preference').value = val;
+}
+
+function goStep(n) {
+    if (n === 2 && !selectedDate) { alert('来店日を選択してください'); return; }
+    if (n === 2 && !selectedTime) { alert('来店時間を選択してください'); return; }
+    if (n === 3 && !selectedCourse) { alert('コースを選択してください'); return; }
+    if (n === 4) {
+        const name = document.getElementById('guest_name').value.trim();
+        const phone = document.getElementById('guest_phone').value.trim();
+        const email = document.getElementById('guest_email').value.trim();
+        if (!name) { alert('お名前を入力してください'); return; }
+        if (!phone) { alert('電話番号を入力してください'); return; }
+        if (!email) { alert('メールアドレスを入力してください'); return; }
+        const courseName = courses.find(c => c.id === selectedCourse)?.name || '';
+        document.getElementById('sum-datetime').textContent = `${selectedDate} ${selectedTime}`;
+        document.getElementById('sum-party').textContent = document.getElementById('count').textContent + '名';
+        document.getElementById('sum-course').textContent = courseName;
+        document.getElementById('sum-seat').textContent = document.getElementById('seat_preference').value;
+        document.getElementById('sum-name').textContent = name;
+        document.getElementById('sum-phone').textContent = phone;
+        document.getElementById('sum-email').textContent = email;
+    }
+    for (let i = 1; i <= 4; i++) {
+        document.getElementById('section-'+i).classList.remove('active');
+        document.getElementById('step-'+i).classList.remove('active','done');
+    }
+    document.getElementById('section-'+n).classList.add('active');
+    for (let i = 1; i < n; i++) document.getElementById('step-'+i).classList.add('done');
+    document.getElementById('step-'+n).classList.add('active');
+    window.scrollTo(0,0);
+}
+
+function checkAgree() {
+    if (!document.getElementById('agree').checked) {
+        alert('キャンセルポリシーへの同意が必要です');
+        return false;
+    }
+    return true;
+}
+
+renderCal();
+renderTimes();
+renderCourses();
+</script>
+</body>
+</html>

@@ -1,0 +1,375 @@
+{% load humanize %}
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>売上ダッシュボード | 頂</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Hiragino Sans', sans-serif;
+    background: #0d0d0d;
+    color: #e0e0e0;
+    min-height: 100vh;
+  }
+
+  /* ナビバー（既存と共通デザイン） */
+  .navbar {
+    background: #111;
+    border-bottom: 1px solid #2a2a2a;
+    padding: 10px 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  .navbar-title { color: #c8a04a; font-size: 15px; font-weight: 600; }
+  .navbar-date  { font-size: 12px; color: #666; }
+  .navbar-links { display: flex; gap: 12px; }
+  .navbar-links a {
+    font-size: 12px; color: #888; text-decoration: none;
+    padding: 4px 8px; border-radius: 6px;
+  }
+  .navbar-links a:hover { background: #1e1e1e; color: #ccc; }
+  .navbar-links a.active { color: #c8a04a; }
+
+  /* レイアウト */
+  .container { max-width: 1024px; margin: 0 auto; padding: 14px 12px; }
+
+  .section-label {
+    font-size: 10px;
+    color: #555;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    margin: 16px 0 8px;
+  }
+  .section-label:first-child { margin-top: 0; }
+
+  /* メトリクスグリッド */
+  .metric-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+  @media (max-width: 600px) { .metric-grid { grid-template-columns: repeat(2, 1fr); } }
+
+  .metric-card {
+    background: #1c1c1c;
+    border: 0.5px solid #2a2a2a;
+    border-radius: 10px;
+    padding: 12px 14px;
+  }
+  .metric-label { font-size: 11px; color: #666; margin-bottom: 4px; }
+  .metric-value { font-size: 22px; font-weight: 600; color: #f0f0f0; }
+  .metric-sub   { font-size: 10px; color: #555; margin-top: 3px; }
+  .metric-up    { color: #1D9E75; }
+  .metric-warn  { color: #EF9F27; }
+
+  /* 汎用カード */
+  .card {
+    background: #1c1c1c;
+    border: 0.5px solid #2a2a2a;
+    border-radius: 10px;
+    padding: 12px 14px;
+  }
+  .card-title { font-size: 11px; color: #666; margin-bottom: 10px; }
+
+  /* 席別グリッド */
+  .seat-grid {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 6px;
+  }
+  @media (max-width: 500px) { .seat-grid { grid-template-columns: repeat(4, 1fr); } }
+
+  .seat {
+    border-radius: 8px;
+    padding: 7px 4px;
+    text-align: center;
+    font-size: 11px;
+    font-weight: 600;
+    line-height: 1.5;
+  }
+  .seat-closed { background: #1D9E75; color: #fff; }
+  .seat-open   { background: #EF9F27; color: #fff; }
+  .seat-unused { background: #222; color: #444; border: 0.5px solid #2a2a2a; }
+
+  .seat-name  { display: block; font-size: 10px; }
+  .seat-price { display: block; font-size: 10px; font-weight: 400; }
+
+  .legend {
+    display: flex; gap: 14px; margin-top: 10px;
+    font-size: 10px; color: #555;
+  }
+  .legend-dot {
+    display: inline-block; width: 9px; height: 9px;
+    border-radius: 3px; margin-right: 4px; vertical-align: middle;
+  }
+
+  /* ランキング */
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  @media (max-width: 500px) { .two-col { grid-template-columns: 1fr; } }
+
+  .rank-item {
+    display: flex; align-items: center; gap: 7px;
+    padding: 5px 0;
+    border-bottom: 0.5px solid #222;
+    font-size: 12px;
+  }
+  .rank-item:last-child { border-bottom: none; }
+  .rank-num  { font-size: 10px; color: #555; width: 14px; text-align: right; flex-shrink: 0; }
+  .rank-name { color: #ccc; flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .rank-bar-bg   { width: 52px; height: 5px; background: #2a2a2a; border-radius: 3px; flex-shrink: 0; }
+  .rank-bar-fill { height: 5px; border-radius: 3px; background: #c8a04a; }
+  .rank-val  { font-size: 10px; color: #888; min-width: 32px; text-align: right; flex-shrink: 0; }
+
+  /* 月間・累計 */
+  .monthly-row {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 6px 0; border-bottom: 0.5px solid #222; font-size: 13px;
+  }
+  .monthly-row:last-child { border-bottom: none; }
+  .monthly-label { color: #666; }
+  .monthly-val   { color: #c8a04a; font-weight: 600; }
+
+  /* 区切り */
+  .strategy-divider {
+    text-align: center; font-size: 10px; color: #333;
+    border-top: 0.5px solid #222;
+    margin: 20px 0 4px; padding-top: 10px;
+    letter-spacing: 0.06em;
+  }
+
+  /* チャートラッパー */
+  .chart-wrap { position: relative; width: 100%; height: 130px; }
+</style>
+</head>
+<body>
+
+<!-- ナビバー -->
+<nav class="navbar">
+  <span class="navbar-title">頂 売上ダッシュボード</span>
+  <div class="navbar-links">
+    <a href="{% url 'reservations:staff_floor' %}">フロア</a>
+    <a href="{% url 'orders:staff_order_list' %}">📋 注文</a>
+    <a href="{% url 'orders:dashboard' %}" class="active">📊 売上</a>
+    <a href="{% url 'logout' %}">ログアウト</a>
+  </div>
+  <span class="navbar-date">{{ today }}</span>
+</nav>
+
+<div class="container">
+
+  <!-- ① 今日のサマリー -->
+  <p class="section-label">今日のサマリー</p>
+  <div class="metric-grid">
+    <div class="metric-card">
+      <p class="metric-label">本日売上</p>
+      <p class="metric-value">¥{{ today_sales|intcomma }}</p>
+      <p class="metric-sub">
+        {% if day_over_day is not None %}
+          {% if day_over_day >= 0 %}
+            <span class="metric-up">昨日比 +{{ day_over_day }}%</span>
+          {% else %}
+            <span class="metric-warn">昨日比 {{ day_over_day }}%</span>
+          {% endif %}
+        {% else %}
+          <span>昨日データなし</span>
+        {% endif %}
+      </p>
+    </div>
+    <div class="metric-card">
+      <p class="metric-label">注文件数</p>
+      <p class="metric-value">{{ today_order_count }}</p>
+      <p class="metric-sub">会計済みオーダー数</p>
+    </div>
+    <div class="metric-card">
+      <p class="metric-label">客単価</p>
+      <p class="metric-value">¥{{ avg_per_order|intcomma }}</p>
+      <p class="metric-sub">1オーダーあたり</p>
+    </div>
+    <div class="metric-card">
+      <p class="metric-label">未会計</p>
+      <p class="metric-value {% if unpaid_count > 0 %}metric-warn{% endif %}">
+        {{ unpaid_count }}席
+      </p>
+      <p class="metric-sub">合計 ¥{{ unpaid_total|intcomma }}</p>
+    </div>
+  </div>
+
+  <!-- ② 席別売上 -->
+  <p class="section-label">席別売上（本日）</p>
+  <div class="card">
+    <div class="seat-grid">
+      {% for seat in seat_list %}
+        <div class="seat
+          {% if seat.status == 'closed' %}seat-closed
+          {% elif seat.status == 'open' %}seat-open
+          {% else %}seat-unused{% endif %}">
+          <span class="seat-name">{{ seat.code }}</span>
+          <span class="seat-price">
+            {% if seat.status == 'unused' %}—
+            {% else %}¥{{ seat.total|intcomma }}{% endif %}
+          </span>
+        </div>
+      {% endfor %}
+    </div>
+    <div class="legend">
+      <span><span class="legend-dot" style="background:#1D9E75"></span>会計済み</span>
+      <span><span class="legend-dot" style="background:#EF9F27"></span>未会計（注文中）</span>
+      <span><span class="legend-dot" style="background:#333;border:0.5px solid #444"></span>使用なし</span>
+    </div>
+  </div>
+
+  <!-- ③ 本日のメニューランキング -->
+  <p class="section-label">本日のメニューランキング</p>
+  <div class="two-col">
+    <div class="card">
+      <p class="card-title">ドリンク</p>
+      {% for item in drink_ranking %}
+        {% with max_cnt=drink_ranking.0.cnt %}
+        <div class="rank-item">
+          <span class="rank-num">{{ forloop.counter }}</span>
+          <span class="rank-name">{{ item.menu_item__name }}</span>
+          <div class="rank-bar-bg">
+            <div class="rank-bar-fill" style="width:{% widthratio item.cnt max_cnt 100 %}%"></div>
+          </div>
+          <span class="rank-val">{{ item.cnt }}杯</span>
+        </div>
+        {% endwith %}
+      {% empty %}
+        <p style="font-size:12px;color:#444;">本日のデータなし</p>
+      {% endfor %}
+    </div>
+    <div class="card">
+      <p class="card-title">フード</p>
+      {% for item in food_ranking %}
+        {% with max_cnt=food_ranking.0.cnt %}
+        <div class="rank-item">
+          <span class="rank-num">{{ forloop.counter }}</span>
+          <span class="rank-name">{{ item.menu_item__name }}</span>
+          <div class="rank-bar-bg">
+            <div class="rank-bar-fill" style="{% widthratio item.cnt max_cnt 100 %}%"></div>
+          </div>
+          <span class="rank-val">{{ item.cnt }}皿</span>
+        </div>
+        {% endwith %}
+      {% empty %}
+        <p style="font-size:12px;color:#444;">本日のデータなし</p>
+      {% endfor %}
+    </div>
+  </div>
+
+  <!-- ④ 月間・累計 -->
+  <p class="section-label">月間・累計</p>
+  <div class="card">
+    <div class="monthly-row">
+      <span class="monthly-label">今月の売上（{{ today|date:"n月" }}）</span>
+      <span class="monthly-val">¥{{ month_sales|intcomma }}</span>
+    </div>
+    <div class="monthly-row">
+      <span class="monthly-label">今月の注文件数</span>
+      <span class="monthly-val">{{ month_order_count }}件</span>
+    </div>
+    <div class="monthly-row">
+      <span class="monthly-label">今年の累計売上（{{ today|date:"Y年" }}）</span>
+      <span class="monthly-val">¥{{ year_sales|intcomma }}</span>
+    </div>
+  </div>
+
+  <!-- 区切り -->
+  <p class="strategy-divider">↓ 戦略データ（スクロールして確認）</p>
+
+  <!-- ⑤ 直近7日間グラフ -->
+  <p class="section-label">直近7日間の売上推移</p>
+  <div class="card">
+    <div class="chart-wrap">
+      <canvas id="weeklyChart"
+        role="img"
+        aria-label="直近7日間の売上推移グラフ">
+      </canvas>
+    </div>
+  </div>
+
+  <!-- ⑥ 先週のランキング -->
+  <p class="section-label">先週のメニューランキング（比較用）</p>
+  <div class="two-col">
+    <div class="card">
+      <p class="card-title">ドリンク（先週）</p>
+      {% for item in last_drink_ranking %}
+        {% with max_cnt=last_drink_ranking.0.cnt %}
+        <div class="rank-item">
+          <span class="rank-num">{{ forloop.counter }}</span>
+          <span class="rank-name">{{ item.menu_item__name }}</span>
+          <div class="rank-bar-bg">
+            <div class="rank-bar-fill" style="width:{% widthratio item.cnt max_cnt 100 %}%"></div>
+          </div>
+          <span class="rank-val">{{ item.cnt }}杯</span>
+        </div>
+        {% endwith %}
+      {% empty %}
+        <p style="font-size:12px;color:#444;">先週のデータなし</p>
+      {% endfor %}
+    </div>
+    <div class="card">
+      <p class="card-title">フード（先週）</p>
+      {% for item in last_food_ranking %}
+        {% with max_cnt=last_food_ranking.0.cnt %}
+        <div class="rank-item">
+          <span class="rank-num">{{ forloop.counter }}</span>
+          <span class="rank-name">{{ item.menu_item__name }}</span>
+          <div class="rank-bar-bg">
+            <div class="rank-bar-fill" style="width:{% widthratio item.cnt max_cnt 100 %}%"></div>
+          </div>
+          <span class="rank-val">{{ item.cnt }}皿</span>
+        </div>
+        {% endwith %}
+      {% empty %}
+        <p style="font-size:12px;color:#444;">先週のデータなし</p>
+      {% endfor %}
+    </div>
+  </div>
+
+</div><!-- /container -->
+
+<script>
+const weeklyData = {{ weekly_data|safe }};
+new Chart(document.getElementById('weeklyChart'), {
+  type: 'line',
+  data: {
+    labels: weeklyData.map(d => d.date),
+    datasets: [{
+      data: weeklyData.map(d => d.sales),
+      borderColor: '#c8a04a',
+      backgroundColor: 'rgba(200,160,74,0.1)',
+      fill: true,
+      tension: 0.35,
+      pointBackgroundColor: '#c8a04a',
+      pointRadius: 4,
+      borderWidth: 2
+    }]
+  },
+  options: {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: { legend: { display: false } },
+    scales: {
+      x: {
+        grid: { display: false },
+        ticks: { font: { size: 11 }, color: '#666' }
+      },
+      y: {
+        grid: { color: 'rgba(255,255,255,0.04)' },
+        ticks: {
+          font: { size: 11 }, color: '#666',
+          callback: v => '¥' + (v / 1000).toFixed(0) + 'k'
+        },
+        beginAtZero: true
+      }
+    }
+  }
+});
+</script>
+</body>
+</html>
