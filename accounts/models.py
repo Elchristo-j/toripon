@@ -26,6 +26,8 @@ class Staff(AbstractUser):
     """スタッフモデル（Djangoの認証ユーザーを拡張）"""
 
     class Role(models.TextChoices):
+        Chief Administrator = '最高管理者',
+        Administrator = '管理人',
         OWNER = 'owner', 'オーナー'
         MANAGER = 'manager', '店長'
         STAFF = 'staff', 'スタッフ'
