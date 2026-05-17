@@ -24,14 +24,13 @@ class Store(models.Model):
 
 class Staff(AbstractUser):
     """スタッフモデル（Djangoの認証ユーザーを拡張）"""
-
     class Role(models.TextChoices):
-        Chief Administrator = '最高管理者',
-        Administrator = '管理人',
-        OWNER = 'owner', 'オーナー'
-        MANAGER = 'manager', '店長'
         STAFF = 'staff', 'スタッフ'
-
+        MANAGER = 'manager', '店長'
+        OWNER = 'owner', 'オーナー'
+        CHIEF_ADMINISTRATOR = 'chief_administrator', '最高管理者'
+        ADMINISTRATOR = 'administrator', '管理人'
+        
     store = models.ForeignKey(
         Store,
         on_delete=models.CASCADE,
