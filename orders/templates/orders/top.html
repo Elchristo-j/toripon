@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>toripon | おらが店専用の注文設計ツール</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Hiragino Sans', sans-serif; background: #f5f5f2; color: #1a1a1a; min-height: 100vh; }
+
+  header { background: #1a2e1a; padding: 2rem; }
+  .header-inner { max-width: 960px; margin: 0 auto; }
+  .header-top { display: flex; align-items: center; gap: 10px; margin-bottom: 0.5rem; }
+  .logo { font-size: 24px; font-weight: 600; color: #fff; letter-spacing: 0.02em; }
+  .badge { font-size: 12px; color: #7ec997; background: rgba(126,201,151,0.15); padding: 2px 10px; border-radius: 99px; border: 1px solid rgba(126,201,151,0.3); }
+  .tagline { color: #a8c8a8; font-size: 15px; }
+
+  main { max-width: 960px; margin: 0 auto; padding: 2rem; }
+  .section-label { font-size: 12px; color: #888; letter-spacing: 0.08em; margin-bottom: 1rem; }
+
+  .store-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 16px; }
+
+  .store-card { background: #fff; border-radius: 12px; border: 1px solid #e8e8e4; overflow: hidden; }
+  .card-header { padding: 1.2rem; border-bottom-width: 2px; border-bottom-style: solid; }
+  .store-name { font-size: 18px; font-weight: 600; margin-bottom: 4px; }
+  .store-meta { font-size: 12px; color: #999; }
+
+  .card-body { padding: 1rem 1.2rem; }
+  .store-info { font-size: 12px; color: #666; margin-bottom: 4px; display: flex; align-items: center; gap: 6px; }
+  .store-info + .store-info { margin-bottom: 12px; }
+
+  .btn-reserve { display: block; width: 100%; padding: 10px; border: none; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; text-align: center; text-decoration: none; margin-top: 12px; }
+  .btn-reserve.active { color: inherit; }
+  .btn-reserve.inactive { background: #f0f0ee; color: #aaa; cursor: default; font-weight: 400; }
+
+  .recruit-card { background: #fff; border-radius: 12px; border: 1px dashed #ccc; display: flex; align-items: center; justify-content: center; min-height: 180px; flex-direction: column; gap: 8px; color: #bbb; font-size: 13px; }
+  .recruit-card svg { width: 24px; height: 24px; stroke: #bbb; fill: none; stroke-width: 1.5; stroke-linecap: round; }
+
+  footer { text-align: center; padding: 2rem; font-size: 12px; color: #aaa; }
+  footer a { color: #5a9e6f; text-decoration: none; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-inner">
+    <div class="header-top">
+      <span class="logo">toripon</span>
+      <span class="badge">by El'christo</span>
+    </div>
+    <p class="tagline">おらが店専用の注文設計ツール</p>
+  </div>
+</header>
+
+<main>
+  <p class="section-label">加盟店舗</p>
+  <div class="store-grid">
+
+    {% for store in stores %}
+    <div class="store-card">
+      <div class="card-header" style="background-color: {{ store.theme_color }}; border-bottom-color: {{ store.theme_text_color }};">
+        <p class="store-name" style="color: {{ store.theme_text_color }};">{{ store.name }}</p>
+        <p class="store-meta" style="color: {{ store.theme_text_color }}; opacity: 0.7;">
+          {% if store.area %}{{ store.area }}{% endif %}
+          {% if store.area and store.genre %} · {% endif %}
+          {% if store.genre %}{{ store.genre }}{% endif %}
+        </p>
+      </div>
+      <div class="card-body">
+        {% if store.business_hours %}
+        <p class="store-info">
+          <svg viewBox="0 0 24 24" style="width:13px;height:13px;flex-shrink:0;stroke:#888;fill:none;stroke-width:1.5;stroke-linecap:round;"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+          {{ store.business_hours }}
+        </p>
+        {% endif %}
+        {% if store.closed_day %}
+        <p class="store-info">
+          <svg viewBox="0 0 24 24" style="width:13px;height:13px;flex-shrink:0;stroke:#888;fill:none;stroke-width:1.5;stroke-linecap:round;"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="9" y1="16" x2="15" y2="16"/></svg>
+          定休 {{ store.closed_day }}
+        </p>
+        {% endif %}
+        {% if store.reservation_url %}
+        <a href="{{ store.reservation_url }}" class="btn-reserve active" style="background-color: {{ store.theme_text_color }}; color: {{ store.theme_color }};">予約する</a>
+        {% else %}
+        <span class="btn-reserve inactive">準備中</span>
+        {% endif %}
+      </div>
+    </div>
+    {% endfor %}
+
+    <div class="recruit-card">
+      <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      加盟店募集中
+    </div>
+
+  </div>
+</main>
+
+<footer>
+  <p>お問い合わせ：<a href="mailto:info@saas.el-christo.online">info@saas.el-christo.online</a></p>
+  <p style="margin-top: 6px;">© 2026 El'christo</p>
+</footer>
+
+</body>
+</html>
