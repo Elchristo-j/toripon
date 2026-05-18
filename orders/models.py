@@ -32,6 +32,8 @@ class MenuItem(models.Model):
     image = models.ImageField('写真', upload_to='menu/', blank=True, null=True)
     is_available = models.BooleanField('提供中', default=True)
     order = models.PositiveIntegerField('表示順', default=0)
+    badge = models.CharField('バッジ（例：人気No.1）', max_length=20, blank=True)
+    unit  = models.CharField('単位（例：房・袋）', max_length=10, default='房')
 
     class Meta:
         ordering = ['order']
@@ -112,7 +114,8 @@ class ProduceOrder(models.Model):
     """農産物直売所向け注文モデル"""
     STATUS_CHOICES = [
         ('pending',   '未確認'),
-        ('confirmed', '確認済み'),
+        ('confirmed', '確認済み・OK'),
+        ('rejected',  'お断り'),
         ('shipped',   '発送済み'),
     ]
     store = models.ForeignKey(
@@ -122,9 +125,13 @@ class ProduceOrder(models.Model):
     # 注文者情報
     customer_name  = models.CharField('お名前', max_length=100)
     customer_phone = models.CharField('電話番号', max_length=20)
-    # 配送先
-    postal_code = models.CharField('郵便番号', max_length=8)
-    address     = models.TextField('住所')
+    customer_email = models.EmailField('メールアドレス', blank=True)
+    # 来店・支払い
+    visit_date     = models.DateField('来店予定日', null=True, blank=True)
+    payment_method = models.CharField('支払方法', max_length=10, default='cash')
+    # 配送先（贈答用フォームで使用）
+    postal_code = models.CharField('郵便番号', max_length=8, blank=True)
+    address     = models.TextField('住所', blank=True)
     # 決済
     stripe_payment_intent = models.CharField(
         'Stripe PaymentIntent ID', max_length=200, blank=True
@@ -132,11 +139,8 @@ class ProduceOrder(models.Model):
     is_paid = models.BooleanField('決済済み', default=False)
     # ステータス・備考
     status     = models.CharField('ステータス', max_length=10,
-                     choices=STATUS_CHOICES, default='pending')
-    visit_date     = models.DateField('来店予定日')
-payment_method = models.CharField('支払方法', max_length=10, default='cash')
-customer_email = models.EmailField('メールアドレス', blank=True)    
-note       = models.TextField('備考', blank=True)
+                                  choices=STATUS_CHOICES, default='pending')
+    note       = models.TextField('備考', blank=True)
     created_at = models.DateTimeField('注文日時', auto_now_add=True)
 
     class Meta:
