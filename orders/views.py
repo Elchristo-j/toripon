@@ -1,3 +1,4 @@
+from accounts.models import Store
 from django.shortcuts import render, get_object_or_404
 from django.http import JsonResponse
 from django.views.decorators.http import require_POST
@@ -273,4 +274,7 @@ def dashboard(request):
         'last_food_ranking': list(last_food_ranking),
     }
     return render(request, 'orders/dashboard.html', context)
- 
+
+def top(request):
+    stores = Store.objects.filter(is_active=True).order_by('created_at')
+    return render(request, 'orders/top.html', {'stores': stores})
