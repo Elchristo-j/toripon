@@ -11,10 +11,11 @@ from django.db.models import Sum, Count
 from django.db.models.functions import TruncDate, TruncHour
 from datetime import timedelta
 
-def order_menu(request, seat_code):
+def order_menu(request, seat_code, store_slug=None):
     seat = get_object_or_404(Seat, code=seat_code)
-    categories = MenuCategory.objects.prefetch_related('items').all()
-
+    categories = MenuCategory.objects.prefetch_related('items').filter(
+        store__slug=store_slug
+    ) if store_slug else MenuCategory.objects.prefetch_related('items').all()
     session_key = f'order_id_{seat_code}'
     order_id = request.session.get(session_key)
 
