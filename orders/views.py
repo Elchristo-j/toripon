@@ -304,6 +304,304 @@ def dashboard(request):
     return render(request, 'orders/dashboard.html', context)
 
 
+def produce_order_form(request, store_slug):
+    """ぶどう園来店予約フォーム（お客さん向け）"""
+    store = get_object_or_404(Store, slug=store_slug, is_active=True)
+    from .models import ProduceOrder, ProduceOrderItem
+    menu_items = MenuItem.objects.filter(
+        category__store=store,
+        is_available=True,
+    ).order_by('order')
+    return render(request, 'orders/produce_order_form.html', {
+        'store': store,
+        'menu_items': menu_items,
+    })
+
+
+@require_POST
+def produce_order_submit(request, store_slug):
+    """ぶどう園来店予約の送信処理"""
+    store = get_object_or_404(Store, slug=store_slug, is_active=True)
+    try:
+        data = json.loads(request.body)
+    except json.JSONDecodeError:
+        return JsonResponse({'success': False, 'error': '不正なリクエストです'})
+
+    visit_date     = data.get('visit_date', '').strip()
+    customer_name  = data.get('customer_name', '').strip()
+    customer_email = data.get('customer_email', '').strip()
+    customer_phone = data.get('customer_phone', '').strip()
+    payment_method = data.get('payment_method', 'cash')
+    items          = data.get('items', [])
+
+    if not all([visit_date, customer_name, customer_email, customer_phone]):
+        return JsonResponse({'success': False, 'error': '必須項目が入力されていません'})
+    if not items:
+        return JsonResponse({'success': False, 'error': '品種を1つ以上選んでください'})
+
+    from .models import ProduceOrder, ProduceOrderItem
+    order = ProduceOrder.objects.create(
+        store=store,
+        customer_name=customer_name,
+        customer_phone=customer_phone,
+        customer_email=customer_email,
+        visit_date=visit_date,
+        payment_method=payment_method,
+        status='pending',
+    )
+
+    for item_data in items:
+        menu_item = get_object_or_404(MenuItem, id=item_data['menu_item_id'])
+        ProduceOrderItem.objects.create(
+            order=order,
+            menu_item=menu_item,
+            quantity=item_data['quantity'],
+        )
+
+    return JsonResponse({'success': True, 'order_id': order.id})
+
+
+def top(request):
+    stores = Store.objects.filter(is_active=True).order_by('created_at')
+    return render(request, 'orders/top.html', {'stores': stores})
+    if user.role in ADMIN_ROLES:
+        orders = Order.objects.filter(status='open')
+    else:
+        orders = Order.objects.filter(status='open', store=user.store)
+
+    orders = orders.prefetch_related('items__menu_item').order_by('created_at')
+
+    context = {
+        'orders': orders,
+    }
+    return render(request, 'orders/staff_order_list.html', context)
+
+
+@login_required
+@require_POST
+def staff_order_merge(request):
+    data = json.loads(request.body)
+    order_ids = data.get('order_ids', [])
+
+    if len(order_ids) < 2:
+        return JsonResponse({'success': False, 'error': '2件以上選択してください'})
+
+    import uuid
+    group_id = str(uuid.uuid4())[:8]
+
+    Order.objects.filter(id__in=order_ids).update(group_id=group_id)
+
+    return JsonResponse({'success': True, 'group_id': group_id})
+
+
+@login_required
+@require_POST
+def staff_order_close(request):
+    data = json.loads(request.body)
+    order_id = data.get('order_id')
+    group_id = data.get('group_id')
+
+    if group_id:
+        Order.objects.filter(group_id=group_id).update(status='closed')
+    else:
+        Order.objects.filter(id=order_id).update(status='closed')
+
+    return JsonResponse({'success': True})
+
+
+@login_required
+def dashboard(request):
+    """売上ダッシュボード"""
+    user = request.user
+
+    # 権限によってフィルター条件を切り替え
+    if user.role in ADMIN_ROLES:
+        store_filter = {}
+        order_filter = {}
+    else:
+        store_filter = {'order__store': user.store}
+        order_filter = {'store': user.store}
+
+    today = timezone.localdate()
+    now   = timezone.now()
+
+    # ── 今日の注文（closedのみ = 会計済み）
+    today_closed = Order.objects.filter(
+        created_at__date=today,
+        status='closed',
+        **order_filter
+    )
+    # ── 今日の未会計（open）
+    today_open = Order.objects.filter(
+        created_at__date=today,
+        status='open',
+        **order_filter
+    )
+
+    # ── 正確な売上（price × quantity）
+    today_sales = OrderItem.objects.filter(
+        order__created_at__date=today,
+        order__status='closed',
+        **store_filter
+    ).aggregate(
+        total=Sum(F('menu_item__price') * F('quantity'))
+    )['total'] or 0
+
+    # ── 今日の注文件数
+    today_order_count = today_closed.count()
+
+    # ── 客単価
+    avg_per_order = int(today_sales / today_order_count) if today_order_count else 0
+
+    # ── 未会計の合計金額と席数
+    unpaid_total = OrderItem.objects.filter(
+        order__created_at__date=today,
+        order__status='open',
+        **store_filter
+    ).aggregate(
+        total=Sum(F('menu_item__price') * F('quantity'))
+    )['total'] or 0
+    unpaid_count = today_open.count()
+
+    # ── 昨日の売上（比較用）
+    yesterday = today - timedelta(days=1)
+    yesterday_sales = OrderItem.objects.filter(
+        order__created_at__date=yesterday,
+        order__status='closed',
+        **store_filter
+    ).aggregate(
+        total=Sum(F('menu_item__price') * F('quantity'))
+    )['total'] or 0
+
+    if yesterday_sales > 0:
+        day_over_day = round((today_sales - yesterday_sales) / yesterday_sales * 100, 1)
+    else:
+        day_over_day = None
+
+    # ── 席別売上（本日）
+    seat_sales_qs = OrderItem.objects.filter(
+        order__created_at__date=today,
+        **store_filter
+    ).values('order__seat_code', 'order__status').annotate(
+        total=Sum(F('menu_item__price') * F('quantity'))
+    )
+
+    # 全席リスト（頂の固定席）
+    ALL_SEATS = ['C-1','C-2','C-3','C-4','C-5','C-6',
+                 'T-1','T-2','T-3',
+                 'K-1','K-2','K-3','K-4']
+
+    seat_dict = {s: {'total': 0, 'status': 'unused'} for s in ALL_SEATS}
+    for row in seat_sales_qs:
+        code = row['order__seat_code']
+        if code in seat_dict:
+            seat_dict[code]['total'] += row['total'] or 0
+            if row['order__status'] == 'open':
+                seat_dict[code]['status'] = 'open'
+            elif seat_dict[code]['status'] == 'unused':
+                seat_dict[code]['status'] = 'closed'
+
+    seat_list = [
+        {'code': code, 'status': data['status'], 'total': data['total']}
+        for code, data in seat_dict.items()
+    ]
+
+    # ── 本日のメニューランキング（カテゴリ別 TOP5）
+    drink_ranking = OrderItem.objects.filter(
+        order__created_at__date=today,
+        menu_item__category__name__in=['ドリンク', 'drink', 'drinks'],
+        **store_filter
+    ).values('menu_item__name').annotate(
+        cnt=Sum('quantity')
+    ).order_by('-cnt')[:5]
+
+    food_ranking = OrderItem.objects.filter(
+        order__created_at__date=today,
+        **store_filter
+    ).exclude(
+        menu_item__category__name__in=['ドリンク', 'drink', 'drinks']
+    ).values('menu_item__name').annotate(
+        cnt=Sum('quantity')
+    ).order_by('-cnt')[:5]
+
+    # ── 月間・累計
+    month_start = today.replace(day=1)
+    month_sales = OrderItem.objects.filter(
+        order__created_at__date__gte=month_start,
+        order__status='closed',
+        **store_filter
+    ).aggregate(
+        total=Sum(F('menu_item__price') * F('quantity'))
+    )['total'] or 0
+
+    month_order_count = Order.objects.filter(
+        created_at__date__gte=month_start,
+        status='closed',
+        **order_filter
+    ).count()
+
+    year_start = today.replace(month=1, day=1)
+    year_sales = OrderItem.objects.filter(
+        order__created_at__date__gte=year_start,
+        order__status='closed',
+        **store_filter
+    ).aggregate(
+        total=Sum(F('menu_item__price') * F('quantity'))
+    )['total'] or 0
+
+    # ── 直近7日間の売上（グラフ用）
+    weekly_data = []
+    for i in range(6, -1, -1):
+        d = today - timedelta(days=i)
+        s = OrderItem.objects.filter(
+            order__created_at__date=d,
+            order__status='closed',
+            **store_filter
+        ).aggregate(
+            total=Sum(F('menu_item__price') * F('quantity'))
+        )['total'] or 0
+        weekly_data.append({'date': d.strftime('%-m/%-d'), 'sales': int(s)})
+
+    # ── 先週のランキング（戦略用）
+    last_week_start = today - timedelta(days=today.weekday() + 7)
+    last_week_end   = last_week_start + timedelta(days=6)
+
+    last_drink_ranking = OrderItem.objects.filter(
+        order__created_at__date__range=[last_week_start, last_week_end],
+        order__status='closed',
+        menu_item__category__name__in=['ドリンク', 'drink', 'drinks'],
+        **store_filter
+    ).values('menu_item__name').annotate(cnt=Sum('quantity')).order_by('-cnt')[:5]
+
+    last_food_ranking = OrderItem.objects.filter(
+        order__created_at__date__range=[last_week_start, last_week_end],
+        order__status='closed',
+        **store_filter
+    ).exclude(
+        menu_item__category__name__in=['ドリンク', 'drink', 'drinks']
+    ).values('menu_item__name').annotate(cnt=Sum('quantity')).order_by('-cnt')[:5]
+
+    context = {
+        'today': today,
+        'today_sales': today_sales,
+        'today_order_count': today_order_count,
+        'avg_per_order': avg_per_order,
+        'unpaid_count': unpaid_count,
+        'unpaid_total': unpaid_total,
+        'day_over_day': day_over_day,
+        'seat_list': seat_list,
+        'drink_ranking': list(drink_ranking),
+        'food_ranking': list(food_ranking),
+        'month_sales': month_sales,
+        'month_order_count': month_order_count,
+        'year_sales': year_sales,
+        'weekly_data': json.dumps(weekly_data, ensure_ascii=False),
+        'last_drink_ranking': list(last_drink_ranking),
+        'last_food_ranking': list(last_food_ranking),
+    }
+    return render(request, 'orders/dashboard.html', context)
+
+
 def top(request):
     stores = Store.objects.filter(is_active=True).order_by('created_at')
     return render(request, 'orders/top.html', {'stores': stores})
