@@ -135,7 +135,8 @@ class ProduceOrder(models.Model):
                      choices=STATUS_CHOICES, default='pending')
     visit_date     = models.DateField('来店予定日')
 payment_method = models.CharField('支払方法', max_length=10, default='cash')
-customer_email = models.EmailField('メールアドレス', blank=True)    note       = models.TextField('備考', blank=True)
+customer_email = models.EmailField('メールアドレス', blank=True)    
+note       = models.TextField('備考', blank=True)
     created_at = models.DateTimeField('注文日時', auto_now_add=True)
 
     class Meta:
