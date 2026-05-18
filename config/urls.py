@@ -7,6 +7,7 @@ urlpatterns = [
     path('login/', auth_views.LoginView.as_view(), name='login'),
     path('logout/', auth_views.LogoutView.as_view(), name='logout'),
     path('reservations/', include('reservations.urls')),
-    path('accounts/', include('accounts.urls')),  # ← sあり！
+    path('accounts/', include('accounts.urls')),
     path('orders/', include('orders.urls')),
+    path('<str:store_slug>/', include('orders.store_urls')),
 ]
