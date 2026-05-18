@@ -102,3 +102,70 @@ class OrderItem(models.Model):
 
     def subtotal(self):
         return self.menu_item.price * self.quantity
+
+
+# ──────────────────────────────────────────
+# 農産物直売所向けモデル
+# ──────────────────────────────────────────
+
+class ProduceOrder(models.Model):
+    """農産物直売所向け注文モデル"""
+    STATUS_CHOICES = [
+        ('pending',   '未確認'),
+        ('confirmed', '確認済み'),
+        ('shipped',   '発送済み'),
+    ]
+    store = models.ForeignKey(
+        Store, on_delete=models.CASCADE,
+        related_name='produce_orders', verbose_name='店舗'
+    )
+    # 注文者情報
+    customer_name  = models.CharField('お名前', max_length=100)
+    customer_phone = models.CharField('電話番号', max_length=20)
+    # 配送先
+    postal_code = models.CharField('郵便番号', max_length=8)
+    address     = models.TextField('住所')
+    # 決済
+    stripe_payment_intent = models.CharField(
+        'Stripe PaymentIntent ID', max_length=200, blank=True
+    )
+    is_paid = models.BooleanField('決済済み', default=False)
+    # ステータス・備考
+    status     = models.CharField('ステータス', max_length=10,
+                     choices=STATUS_CHOICES, default='pending')
+    note       = models.TextField('備考', blank=True)
+    created_at = models.DateTimeField('注文日時', auto_now_add=True)
+
+    class Meta:
+        verbose_name = '直売注文'
+        verbose_name_plural = '直売注文'
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f'直売注文#{self.pk}（{self.customer_name}）'
+
+    def total_price(self):
+        return sum(item.subtotal() for item in self.produce_items.all())
+
+
+class ProduceOrderItem(models.Model):
+    """直売注文の明細"""
+    order = models.ForeignKey(
+        ProduceOrder, on_delete=models.CASCADE,
+        related_name='produce_items', verbose_name='注文'
+    )
+    menu_item = models.ForeignKey(
+        MenuItem, on_delete=models.PROTECT,
+        verbose_name='商品'
+    )
+    quantity = models.PositiveIntegerField('数量', default=1)
+
+    class Meta:
+        verbose_name = '直売注文明細'
+        verbose_name_plural = '直売注文明細'
+
+    def __str__(self):
+        return f'{self.menu_item.name} × {self.quantity}'
+
+    def subtotal(self):
+        return self.menu_item.price * self.quantity
