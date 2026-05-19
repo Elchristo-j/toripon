@@ -15,18 +15,15 @@
 
     .body { padding: 1rem; max-width: 480px; margin: 0 auto; }
 
-    /* タブ */
     .tab-row { display: flex; gap: 6px; margin-bottom: 1rem; }
     .tab { flex: 1; padding: 8px 4px; border-radius: 8px; border: 0.5px solid #c9a8d8; background: #fff; text-align: center; font-size: 12px; color: #6b3a8a; cursor: pointer; }
     .tab.active { background: #4a1a6e; border-color: #4a1a6e; color: #e8c8f5; }
 
-    /* 予約カード */
-    .order-card { background: #fff; border-radius: 12px; border: 0.5px solid #c9a8d8; padding: 1rem; margin-bottom: 10px; position: relative; }
+    .order-card { background: #fff; border-radius: 12px; border: 0.5px solid #c9a8d8; padding: 1rem; margin-bottom: 10px; }
     .order-card.status-pending  { border-left: 4px solid #e8a020; }
     .order-card.status-confirmed { border-left: 4px solid #2d7a4a; }
     .order-card.status-rejected { border-left: 4px solid #a83030; opacity: 0.6; }
 
-    /* 種別ラベル */
     .type-label { display: inline-block; font-size: 10px; border-radius: 4px; padding: 2px 7px; margin-bottom: 6px; font-weight: 500; }
     .type-label.visit    { background: #e8f0ff; color: #2a4a9a; }
     .type-label.delivery { background: #fff0e0; color: #9a5010; }
@@ -46,9 +43,18 @@
     .customer-info { font-size: 12px; color: #6b3a8a; margin-bottom: 10px; line-height: 1.8; }
     .payment-label { display: inline-block; font-size: 11px; background: #f0ddf7; color: #6b3a8a; border-radius: 4px; padding: 2px 7px; }
 
-    /* 届け先ブロック（配送のみ） */
-    .delivery-detail { background: #fff8f0; border: 0.5px solid #e8c8a0; border-radius: 8px; padding: 8px 10px; margin-bottom: 10px; font-size: 12px; color: #5a3010; line-height: 1.8; }
-    .delivery-detail .detail-title { font-size: 10px; font-weight: 600; color: #9a5010; margin-bottom: 4px; letter-spacing: 0.05em; }
+    /* 送り主 */
+    .sender-box { background: #f7f0fa; border-radius: 8px; padding: 8px 10px; margin-bottom: 8px; font-size: 12px; color: #4a1a6e; line-height: 1.8; }
+    .box-label { font-size: 10px; font-weight: 600; color: #9a6ab0; margin-bottom: 3px; letter-spacing: 0.05em; }
+
+    /* 届け先（複数） */
+    .address-list { margin-bottom: 10px; }
+    .address-item { background: #fff8f0; border: 0.5px solid #e8c8a0; border-radius: 8px; padding: 8px 10px; margin-bottom: 6px; font-size: 12px; color: #5a3010; line-height: 1.8; }
+    .address-item .box-label { color: #9a5010; }
+    .address-note { font-size: 11px; color: #888; margin-top: 2px; }
+
+    /* 折りたたみ */
+    .toggle-btn { background: none; border: none; color: #9a6ab0; font-size: 11px; cursor: pointer; padding: 0; margin-bottom: 6px; }
 
     .note-box { background: #f0f0f0; border-radius: 6px; padding: 6px 10px; font-size: 12px; color: #444; margin-bottom: 10px; }
 
@@ -58,10 +64,8 @@
     .btn-ok:disabled, .btn-ng:disabled { opacity: 0.4; cursor: not-allowed; }
 
     .empty { text-align: center; padding: 3rem 1rem; color: #9a6ab0; font-size: 14px; }
-
     .toast { position: fixed; top: 1rem; left: 50%; transform: translateX(-50%); background: #4a1a6e; color: #e8c8f5; padding: 10px 20px; border-radius: 10px; font-size: 13px; display: none; z-index: 999; white-space: nowrap; }
     .toast.show { display: block; }
-
     .refresh-info { text-align: center; font-size: 11px; color: #9a6ab0; margin-bottom: 1rem; }
   </style>
 </head>
@@ -94,7 +98,6 @@
          data-status="{{ order.status }}"
          data-type="{{ order.order_type }}">
 
-      <!-- 種別ラベル -->
       {% if order.order_type == 'delivery' %}
       <div class="type-label delivery">📦 贈答・配送</div>
       {% else %}
@@ -136,21 +139,32 @@
         <span class="payment-label">{{ order.get_payment_method_display }}</span>
       </div>
 
-      <!-- 配送のみ：送り主・届け先 -->
       {% if order.order_type == 'delivery' %}
-      <div class="delivery-detail">
-        <div class="detail-title">送り主</div>
-        {{ order.sender_name }}　{{ order.sender_phone }}<br>
-        〒{{ order.sender_postal_code }}　{{ order.sender_address }}
-      </div>
-      <div class="delivery-detail">
-        <div class="detail-title">届け先</div>
-        {{ order.receiver_name }}　{{ order.receiver_phone }}<br>
-        〒{{ order.postal_code }}　{{ order.address }}
-      </div>
+        <!-- 送り主 -->
+        <div class="sender-box">
+          <div class="box-label">送り主</div>
+          {{ order.sender_name }}　{{ order.sender_phone }}<br>
+          〒{{ order.sender_postal_code }}　{{ order.sender_address }}
+        </div>
+
+        <!-- 届け先（複数） -->
+        {% with addrs=order.delivery_addresses.all %}
+        {% if addrs %}
+        <div class="address-list">
+          <div class="box-label" style="color:#9a5010;font-size:10px;margin-bottom:4px;">届け先（{{ addrs|length }}件）</div>
+          {% for addr in addrs %}
+          <div class="address-item">
+            <div class="box-label">届け先 {{ addr.index }}</div>
+            {{ addr.receiver_name }}{% if addr.receiver_phone %}　{{ addr.receiver_phone }}{% endif %}<br>
+            {% if addr.postal_code %}〒{{ addr.postal_code }}　{% endif %}{{ addr.address }}
+            {% if addr.note %}<div class="address-note">📝 {{ addr.note }}</div>{% endif %}
+          </div>
+          {% endfor %}
+        </div>
+        {% endif %}
+        {% endwith %}
       {% endif %}
 
-      <!-- 特記事項 -->
       {% if order.note %}
       <div class="note-box">📝 {{ order.note }}</div>
       {% endif %}
@@ -182,7 +196,7 @@
       const status = card.dataset.status;
       const type   = card.dataset.type;
       let show = false;
-      if (tab === 'all')      show = true;
+      if (tab === 'all')           show = true;
       else if (tab === 'pending')  show = status === 'pending';
       else if (tab === 'visit')    show = type === 'visit';
       else if (tab === 'delivery') show = type === 'delivery';
@@ -197,7 +211,7 @@
     fetch('/orders/produce/staff/action/', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken') },
-      body: JSON.stringify({ order_id: orderId, action: action }),
+      body: JSON.stringify({ order_id: orderId, action }),
     })
     .then(r => r.json())
     .then(data => {
@@ -225,7 +239,6 @@
     if (countdown <= 0) location.reload();
   }, 1000);
 
-  // 新規予約通知音
   function playBeep() {
     try {
       const ctx = new (window.AudioContext || window.webkitAudioContext)();
@@ -235,12 +248,11 @@
       o.frequency.value = 880;
       g.gain.setValueAtTime(0.3, ctx.currentTime);
       g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.5);
-      o.start(ctx.currentTime);
-      o.stop(ctx.currentTime + 0.5);
+      o.start(ctx.currentTime); o.stop(ctx.currentTime + 0.5);
     } catch(e) {}
   }
 
-  const newCount = {{ pending_count }};
+  const newCount  = {{ pending_count }};
   const lastCount = parseInt(sessionStorage.getItem('lastPendingCount') || '0');
   if (newCount > lastCount) { playBeep(); }
   sessionStorage.setItem('lastPendingCount', newCount);
