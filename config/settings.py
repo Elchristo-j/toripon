@@ -166,3 +166,7 @@ CSRF_TRUSTED_ORIGINS = [
     'https://itadaki.el-christo.online',
     'https://toripon.el-christo.online',
 ]
+
+# メール設定（開発中：コンソール出力）
+EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+DEFAULT_FROM_EMAIL = 'noreply@el-christo.online'
