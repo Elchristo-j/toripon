@@ -33,6 +33,7 @@ class MenuItem(models.Model):
     is_available = models.BooleanField('提供中', default=True)
     order = models.PositiveIntegerField('表示順', default=0)
     badge = models.CharField('バッジ（例：人気No.1）', max_length=20, blank=True)
+    image_url = models.URLField('画像URL（Cloudinary）', blank=True)
     unit  = models.CharField('単位（例：房・袋）', max_length=10, default='房')
 
     class Meta:
