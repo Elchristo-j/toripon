@@ -111,8 +111,8 @@
       <div class="grape-grid">
         {% for item in menu_items %}
         <div class="grape-card">
-          {% if item.image %}
-          <img class="grape-img" src="{{ item.image.url }}" alt="{{ item.name }}" />
+          {% if item.image_url %}
+          <img class="grape-img" src="{{ item.image_url }}" alt="{{ item.name }}" />
           {% else %}
           <div class="grape-img" style="display:flex;align-items:center;justify-content:center;font-size:32px;">🍇</div>
           {% endif %}
