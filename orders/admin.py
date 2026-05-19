@@ -5,7 +5,7 @@ from .models import MenuCategory, MenuItem, Order, OrderItem
 class MenuItemInline(admin.TabularInline):
     model = MenuItem
     extra = 1
-    fields = ['name', 'price', 'order', 'is_available']
+    fields = ['name', 'price', 'image_url', 'badge', 'unit', 'order', 'is_available']
 
 
 @admin.register(MenuCategory)
