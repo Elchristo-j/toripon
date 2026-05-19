@@ -34,7 +34,7 @@ class MenuItem(models.Model):
     order = models.PositiveIntegerField('表示順', default=0)
     badge = models.CharField('バッジ（例：人気No.1）', max_length=20, blank=True)
     image_url = models.URLField('画像URL（Cloudinary）', blank=True)
-    unit  = models.CharField('単位（例：房・袋）', max_length=10, default='房')
+    unit = models.CharField('単位（例：房・袋）', max_length=10, default='房')
 
     class Meta:
         ordering = ['order']
@@ -119,39 +119,38 @@ class ProduceOrder(models.Model):
         ('rejected',  'お断り'),
         ('shipped',   '発送済み'),
     ]
-    store = models.ForeignKey(
-        Store, on_delete=models.CASCADE,
-        related_name='produce_orders', verbose_name='店舗'
-    )
-    # 注文者情報
-    customer_name  = models.CharField('お名前', max_length=100)
-    customer_phone = models.CharField('電話番号', max_length=20)
-    customer_email = models.EmailField('メールアドレス', blank=True)
-    # 来店・支払い
-    visit_date     = models.DateField('来店予定日', null=True, blank=True)
-    payment_method = models.CharField('支払方法', max_length=10, default='cash')
-    # 注文種別
     ORDER_TYPE_CHOICES = [
         ('visit',    '来店受取'),
         ('delivery', '配送（贈答）'),
     ]
+    store = models.ForeignKey(
+        Store, on_delete=models.CASCADE,
+        related_name='produce_orders', verbose_name='店舗'
+    )
     order_type = models.CharField(
         '注文種別', max_length=10,
         choices=ORDER_TYPE_CHOICES, default='visit'
     )
-    # 希望配送日
-    delivery_date = models.DateField('希望配送日', null=True, blank=True)
-    # 送り主情報
+    # 申込者情報
+    customer_name  = models.CharField('お名前', max_length=100)
+    customer_phone = models.CharField('電話番号', max_length=20)
+    customer_email = models.EmailField('メールアドレス', blank=True)
+    # 来店
+    visit_date     = models.DateField('来店予定日', null=True, blank=True)
+    # 支払い
+    payment_method = models.CharField('支払方法', max_length=10, default='cash')
+    # 希望配送日（配送注文の共通日付）
+    delivery_date  = models.DateField('希望配送日', null=True, blank=True)
+    # 送り主情報（配送注文）
     sender_name        = models.CharField('送り主氏名', max_length=100, blank=True)
     sender_phone       = models.CharField('送り主電話番号', max_length=20, blank=True)
     sender_postal_code = models.CharField('送り主郵便番号', max_length=8, blank=True)
     sender_address     = models.TextField('送り主住所', blank=True)
-    # 届け先情報
+    # 旧・届け先フィールド（後方互換のため残す）
     receiver_name  = models.CharField('届け先氏名', max_length=100, blank=True)
     receiver_phone = models.CharField('届け先電話番号', max_length=20, blank=True)
-    # 配送先（贈答用フォームで使用）
-    postal_code = models.CharField('郵便番号', max_length=8, blank=True)
-    address     = models.TextField('住所', blank=True)
+    postal_code    = models.CharField('郵便番号', max_length=8, blank=True)
+    address        = models.TextField('住所', blank=True)
     # 決済
     stripe_payment_intent = models.CharField(
         'Stripe PaymentIntent ID', max_length=200, blank=True
@@ -173,6 +172,28 @@ class ProduceOrder(models.Model):
 
     def total_price(self):
         return sum(item.subtotal() for item in self.produce_items.all())
+
+
+class DeliveryAddress(models.Model):
+    """届け先（複数対応）"""
+    order = models.ForeignKey(
+        ProduceOrder, on_delete=models.CASCADE,
+        related_name='delivery_addresses', verbose_name='注文'
+    )
+    index        = models.PositiveIntegerField('届け先番号', default=1)  # 1始まり
+    receiver_name  = models.CharField('届け先氏名', max_length=100)
+    receiver_phone = models.CharField('届け先電話番号', max_length=20, blank=True)
+    postal_code    = models.CharField('郵便番号', max_length=8, blank=True)
+    address        = models.TextField('住所')
+    note           = models.TextField('個別備考', blank=True)
+
+    class Meta:
+        ordering = ['index']
+        verbose_name = '届け先'
+        verbose_name_plural = '届け先'
+
+    def __str__(self):
+        return f'#{self.order.pk} 届け先{self.index}：{self.receiver_name}'
 
 
 class ProduceOrderItem(models.Model):
