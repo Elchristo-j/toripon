@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>贈答用ぶどう注文 | {{ store.name }}</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: #f0e8f5; font-family: -apple-system, BlinkMacSystemFont, 'Hiragino Sans', sans-serif; min-height: 100vh; padding: 1rem; }
+    .frame { background: #f7f0fa; border-radius: 16px; border: 0.5px solid #c9a8d8; overflow: hidden; max-width: 420px; margin: 0 auto; }
+    .header { position: relative; height: 120px; background: #4a1a6e; display: flex; align-items: flex-end; padding: 0 1.25rem 1rem; overflow: hidden; }
+    .header-bg { position: absolute; inset: 0; background-size: cover; background-position: center; opacity: 0.45; }
+    .header-title { position: relative; color: #e8c8f5; font-size: 18px; font-weight: 600; letter-spacing: 0.05em; }
+    .header-sub { position: relative; color: #d4aee8; font-size: 11px; margin-top: 2px; }
+    .body { padding: 1.25rem; }
+    .section-title { display: flex; align-items: center; gap: 8px; font-size: 11px; font-weight: 600; color: #6b3a8a; letter-spacing: 0.08em; margin-bottom: 0.75rem; }
+    .section-title::after { content: ''; flex: 1; height: 0.5px; background: #d4aee8; }
+    .notice { background: #f0ddf7; border-radius: 6px; padding: 7px 10px; font-size: 11px; color: #6b3a8a; margin-bottom: 1rem; border-left: 3px solid #4a1a6e; }
+    .grape-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 1.25rem; }
+    .grape-card { background: #fff; border: 0.5px solid #c9a8d8; border-radius: 10px; overflow: hidden; }
+    .grape-img { width: 100%; height: 80px; object-fit: cover; display: block; background: #e8d5f5; }
+    .grape-info { padding: 6px 8px 8px; }
+    .grape-badge { display: inline-block; font-size: 9px; background: #f0ddf7; color: #6b3a8a; border-radius: 4px; padding: 1px 5px; margin-bottom: 3px; }
+    .grape-name { font-size: 13px; font-weight: 600; color: #2d1040; margin-bottom: 2px; }
+    .grape-price { font-size: 11px; color: #6b3a8a; margin-bottom: 6px; }
+    .size-chips { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 4px; }
+    .size-chip { padding: 4px 10px; border-radius: 6px; border: 0.5px solid #c9a8d8; background: #fff; font-size: 12px; color: #6b3a8a; cursor: pointer; }
+    .size-chip.selected { background: #4a1a6e; border-color: #4a1a6e; color: #e8c8f5; }
+    .field { width: 100%; padding: 10px 12px; border: 0.5px solid #c9a8d8; border-radius: 8px; font-size: 14px; background: #fff; margin-bottom: 8px; color: #2d1040; }
+    .field:focus { outline: none; border-color: #4a1a6e; }
+    .field-row { display: grid; grid-template-columns: 1fr 2fr; gap: 8px; }
+    .pay-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin-bottom: 1.25rem; }
+    .pay-chip { padding: 9px; border-radius: 8px; border: 0.5px solid #c9a8d8; background: #fff; text-align: center; font-size: 12px; color: #6b3a8a; cursor: pointer; }
+    .pay-chip.selected { background: #4a1a6e; border-color: #4a1a6e; color: #e8c8f5; }
+    .submit-btn { width: 100%; background: #4a1a6e; color: #e8c8f5; border: none; border-radius: 10px; padding: 14px; font-size: 15px; font-weight: 500; cursor: pointer; letter-spacing: 0.03em; }
+    .section-box { background: #fff; border: 0.5px solid #c9a8d8; border-radius: 10px; padding: 12px; margin-bottom: 1.25rem; }
+    .complete { display: none; text-align: center; padding: 2.5rem 1rem; }
+    .complete-icon { font-size: 48px; margin-bottom: 1rem; }
+    .complete-title { font-size: 18px; font-weight: 600; color: #4a1a6e; margin-bottom: 0.75rem; }
+    .complete-text { font-size: 13px; color: #6b3a8a; line-height: 1.8; }
+    .error-msg { background: #fdf0f0; border: 0.5px solid #e8b0b0; border-radius: 6px; padding: 8px 12px; font-size: 12px; color: #a83030; margin-bottom: 1rem; display: none; }
+  </style>
+</head>
+<body>
+  <div class="frame">
+    <div class="header">
+      <div class="header-bg" style="background-image: url('https://res.cloudinary.com/dgxnatvsw/image/upload/v1779144796/%E8%97%A4%E7%A8%94%E3%82%8A_800_x_600_px_f6k4hn.jpg');"></div>
+      <div>
+        <div class="header-title">🍇 贈答用ぶどう注文</div>
+        <div class="header-sub">{{ store.name }}</div>
+      </div>
+    </div>
+
+<div class="body" id="order-form">
+      <div class="notice">
+        ご注文後、オーナーが在庫を確認してからご連絡いたします。<br>
+        確認後に決済方法をご案内します。
+      </div>
+
+      <!-- 品種選択 -->
+      <div class="section-title">品種・数量を選ぶ</div>
+      <div class="grape-grid">
+        {% for item in menu_items %}
+        <div class="grape-card">
+          {% if item.image_url %}
+          <img class="grape-img" src="{{ item.image_url }}" alt="{{ item.name }}" />
+          {% else %}
+          <div class="grape-img"></div>
+          {% endif %}
+          <div class="grape-info">
+            {% if item.badge %}<span class="grape-badge">{{ item.badge }}</span>{% endif %}
+            <div class="grape-name">{{ item.name }}</div>
+            {% if item.price %}<div class="grape-price">{{ item.price }}円/{{ item.unit }}</div>{% endif %}
+            <div class="size-chips" id="size-{{ item.id }}">
+              <span class="size-chip" data-item="{{ item.id }}" data-size="1">1kg</span>
+              <span class="size-chip" data-item="{{ item.id }}" data-size="2">2kg</span>
+              <span class="size-chip" data-item="{{ item.id }}" data-size="5">5kg</span>
+            </div>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+
+      <!-- 申込者情報 -->
+      <div class="section-title">申込者情報</div>
+      <div class="section-box">
+        <input class="field" id="customer_name" type="text" placeholder="お名前（必須）" />
+        <input class="field" id="customer_phone" type="tel" placeholder="電話番号（必須）" />
+        <input class="field" id="customer_email" type="email" placeholder="メールアドレス（必須）" />
+      </div>
+
+      <!-- 送り主情報 -->
+      <div class="section-title">送り主情報</div>
+      <div class="section-box">
+        <input class="field" id="sender_name" type="text" placeholder="氏名（必須）" />
+        <input class="field" id="sender_phone" type="tel" placeholder="電話番号（必須）" />
+        <div class="field-row">
+          <input class="field" id="sender_postal_code" type="text" placeholder="〒（必須）" maxlength="8" />
+          <input class="field" id="sender_address" type="text" placeholder="住所（必須）" />
+        </div>
+      </div>
+
+      <!-- 届け先情報 -->
+      <div class="section-title">届け先情報</div>
+      <div class="section-box">
+        <input class="field" id="receiver_name" type="text" placeholder="氏名（必須）" />
+        <input class="field" id="receiver_phone" type="tel" placeholder="電話番号（必須）" />
+        <div class="field-row">
+          <input class="field" id="postal_code" type="text" placeholder="〒（必須）" maxlength="8" />
+          <input class="field" id="address" type="text" placeholder="住所（必須）" />
+        </div>
+      </div>
+
+      <!-- 希望配送日 -->
+      <div class="section-title">希望配送日</div>
+      <input class="field" id="delivery_date" type="date" style="margin-bottom:1.25rem;" />
+
+      <!-- 支払方法 -->
+      <div class="section-title">お支払方法</div>
+      <div class="pay-grid">
+        <div class="pay-chip selected" data-pay="bank">🏦 銀行振込</div>
+        <div class="pay-chip" data-pay="paypay">📱 PayPay</div>
+        <div class="pay-chip" data-pay="stripe">💳 クレジット</div>
+        <div class="pay-chip" data-pay="cash">💴 現金（来店）</div>
+      </div>
+
+      <!-- 特記事項 -->
+      <div class="section-title">特記事項</div>
+      <textarea class="field" id="note" rows="3" placeholder="のし・ギフト包装のご要望など" style="margin-bottom:1.25rem;resize:none;"></textarea>
+
+      <div class="error-msg" id="error-msg"></div>
+      <button class="submit-btn" onclick="submitOrder()">📦 注文を申し込む</button>
+    </div>
+
+    <!-- 完了画面 -->
+    <div class="complete" id="complete-screen">
+      <div class="complete-icon">🍇</div>
+      <div class="complete-title">申し込みを受け付けました</div>
+      <p class="complete-text">オーナーが在庫を確認後、<br>メールにてお支払方法をご連絡いたします。<br><br>しばらくお待ちください。</p>
+      <button class="submit-btn" style="margin-top:1.5rem;" onclick="location.reload()">🍇 最初に戻る</button>
+    </div>
+  </div>
+
+<script>
+    const storeSlug = "{{ store.slug }}";
+    let selectedSizes = {};
+    let paymentMethod = 'bank';
+
+    document.querySelectorAll('.size-chip').forEach(chip => {
+      chip.addEventListener('click', () => {
+        const itemId = chip.dataset.item;
+        const size = parseInt(chip.dataset.size);
+        document.querySelectorAll(`.size-chip[data-item="${itemId}"]`).forEach(c => c.classList.remove('selected'));
+        if (selectedSizes[itemId] === size) {
+          delete selectedSizes[itemId];
+        } else {
+          chip.classList.add('selected');
+          selectedSizes[itemId] = size;
+        }
+      });
+    });
+
+    document.querySelectorAll('.pay-chip').forEach(chip => {
+      chip.addEventListener('click', () => {
+        document.querySelectorAll('.pay-chip').forEach(c => c.classList.remove('selected'));
+        chip.classList.add('selected');
+        paymentMethod = chip.dataset.pay;
+      });
+    });
+
+    const dateInput = document.getElementById('delivery_date');
+    const today = new Date();
+    today.setDate(today.getDate() + 1);
+    dateInput.min = today.toISOString().split('T')[0];
+
+    function showError(msg) {
+      const el = document.getElementById('error-msg');
+      el.textContent = msg;
+      el.style.display = 'block';
+    }
+
+    async function submitOrder() {
+      document.getElementById('error-msg').style.display = 'none';
+
+      const items = Object.entries(selectedSizes).map(([id, kg]) => ({
+        menu_item_id: parseInt(id),
+        quantity: kg,
+      }));
+
+      const payload = {
+        customer_name:      document.getElementById('customer_name').value.trim(),
+        customer_phone:     document.getElementById('customer_phone').value.trim(),
+        customer_email:     document.getElementById('customer_email').value.trim(),
+        delivery_date:      document.getElementById('delivery_date').value,
+        payment_method:     paymentMethod,
+        note:               document.getElementById('note').value.trim(),
+        sender_name:        document.getElementById('sender_name').value.trim(),
+        sender_phone:       document.getElementById('sender_phone').value.trim(),
+        sender_postal_code: document.getElementById('sender_postal_code').value.trim(),
+        sender_address:     document.getElementById('sender_address').value.trim(),
+        receiver_name:      document.getElementById('receiver_name').value.trim(),
+        receiver_phone:     document.getElementById('receiver_phone').value.trim(),
+        postal_code:        document.getElementById('postal_code').value.trim(),
+        address:            document.getElementById('address').value.trim(),
+        items,
+      };
+
+      if (!payload.customer_name || !payload.customer_phone || !payload.customer_email) {
+        return showError('申込者情報を入力してください');
+      }
+      if (!payload.sender_name || !payload.sender_phone || !payload.sender_postal_code || !payload.sender_address) {
+        return showError('送り主情報を入力してください');
+      }
+      if (!payload.receiver_name || !payload.receiver_phone || !payload.postal_code || !payload.address) {
+        return showError('届け先情報を入力してください');
+      }
+      if (!payload.delivery_date) {
+        return showError('希望配送日を選択してください');
+      }
+      if (items.length === 0) {
+        return showError('品種を1つ以上選んでください');
+      }
+
+      try {
+        const res = await fetch(`/${storeSlug}/delivery/order/`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'X-CSRFToken': '{{ csrf_token }}' },
+          body: JSON.stringify(payload),
+        });
+        const data = await res.json();
+        if (data.success) {
+          document.getElementById('order-form').style.display = 'none';
+          document.getElementById('complete-screen').style.display = 'block';
+        } else {
+          showError(data.error || '送信に失敗しました');
+        }
+      } catch (e) {
+        showError('通信エラーが発生しました。もう一度お試しください。');
+      }
+    }
+  </script>
+</body>
+</html>
