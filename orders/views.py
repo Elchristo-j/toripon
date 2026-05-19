@@ -445,3 +445,139 @@ def produce_order_submit(request, store_slug):
 def top(request):
     stores = Store.objects.filter(is_active=True).order_by('created_at')
     return render(request, 'orders/top.html', {'stores': stores})
+
+
+def delivery_order_form(request, store_slug):
+    store = get_object_or_404(Store, slug=store_slug, is_active=True)
+    menu_items = MenuItem.objects.filter(category__store=store, is_available=True)
+    return render(request, 'orders/delivery_order_form.html', {
+        'store': store,
+        'menu_items': menu_items,
+    })
+
+
+def delivery_order_submit(request, store_slug):
+    store = get_object_or_404(Store, slug=store_slug, is_active=True)
+    try:
+        data = json.loads(request.body)
+    except json.JSONDecodeError:
+        return JsonResponse({'success': False, 'error': '不正なリクエストです'})
+    customer_name = data.get('customer_name', '').strip()
+    customer_phone = data.get('customer_phone', '').strip()
+    customer_email = data.get('customer_email', '').strip()
+    delivery_date = data.get('delivery_date', '').strip()
+    payment_method = data.get('payment_method', 'bank')
+    note = data.get('note', '').strip()
+    items = data.get('items', [])
+    sender_name = data.get('sender_name', '').strip()
+    sender_phone = data.get('sender_phone', '').strip()
+    sender_postal_code = data.get('sender_postal_code', '').strip()
+    sender_address = data.get('sender_address', '').strip()
+    receiver_name = data.get('receiver_name', '').strip()
+    receiver_phone = data.get('receiver_phone', '').strip()
+    postal_code = data.get('postal_code', '').strip()
+    address = data.get('address', '').strip()
+    if not all([customer_name, customer_phone, customer_email, delivery_date]):
+        return JsonResponse({'success': False, 'error': '必須項目が入力されていません'})
+    if not all([sender_name, sender_phone, sender_postal_code, sender_address]):
+        return JsonResponse({'success': False, 'error': '送り主情報を入力してください'})
+    if not all([receiver_name, receiver_phone, postal_code, address]):
+        return JsonResponse({'success': False, 'error': '届け先情報を入力してください'})
+    if not items:
+        return JsonResponse({'success': False, 'error': '品種を1つ以上選んでください'})
+    from .models import ProduceOrder, ProduceOrderItem
+    order = ProduceOrder.objects.create(
+        store=store,
+        order_type='delivery',
+        customer_name=customer_name,
+        customer_phone=customer_phone,
+        customer_email=customer_email,
+        delivery_date=delivery_date,
+        payment_method=payment_method,
+        note=note,
+        sender_name=sender_name,
+        sender_phone=sender_phone,
+        sender_postal_code=sender_postal_code,
+        sender_address=sender_address,
+        receiver_name=receiver_name,
+        receiver_phone=receiver_phone,
+        postal_code=postal_code,
+        address=address,
+        status='pending',
+    )
+    for item_data in items:
+        menu_item = get_object_or_404(MenuItem, id=item_data['menu_item_id'])
+        ProduceOrderItem.objects.create(
+            order=order,
+            menu_item=menu_item,
+            quantity=item_data['quantity'],
+        )
+    return JsonResponse({'success': True})
+
+
+def delivery_order_form(request, store_slug):
+    store = get_object_or_404(Store, slug=store_slug, is_active=True)
+    menu_items = MenuItem.objects.filter(category__store=store, is_available=True)
+    return render(request, 'orders/delivery_order_form.html', {
+        'store': store,
+        'menu_items': menu_items,
+    })
+
+
+def delivery_order_submit(request, store_slug):
+    store = get_object_or_404(Store, slug=store_slug, is_active=True)
+    try:
+        data = json.loads(request.body)
+    except json.JSONDecodeError:
+        return JsonResponse({'success': False, 'error': '不正なリクエストです'})
+    customer_name = data.get('customer_name', '').strip()
+    customer_phone = data.get('customer_phone', '').strip()
+    customer_email = data.get('customer_email', '').strip()
+    delivery_date = data.get('delivery_date', '').strip()
+    payment_method = data.get('payment_method', 'bank')
+    note = data.get('note', '').strip()
+    items = data.get('items', [])
+    sender_name = data.get('sender_name', '').strip()
+    sender_phone = data.get('sender_phone', '').strip()
+    sender_postal_code = data.get('sender_postal_code', '').strip()
+    sender_address = data.get('sender_address', '').strip()
+    receiver_name = data.get('receiver_name', '').strip()
+    receiver_phone = data.get('receiver_phone', '').strip()
+    postal_code = data.get('postal_code', '').strip()
+    address = data.get('address', '').strip()
+    if not all([customer_name, customer_phone, customer_email, delivery_date]):
+        return JsonResponse({'success': False, 'error': '必須項目が入力されていません'})
+    if not all([sender_name, sender_phone, sender_postal_code, sender_address]):
+        return JsonResponse({'success': False, 'error': '送り主情報を入力してください'})
+    if not all([receiver_name, receiver_phone, postal_code, address]):
+        return JsonResponse({'success': False, 'error': '届け先情報を入力してください'})
+    if not items:
+        return JsonResponse({'success': False, 'error': '品種を1つ以上選んでください'})
+    from .models import ProduceOrder, ProduceOrderItem
+    order = ProduceOrder.objects.create(
+        store=store,
+        order_type='delivery',
+        customer_name=customer_name,
+        customer_phone=customer_phone,
+        customer_email=customer_email,
+        delivery_date=delivery_date,
+        payment_method=payment_method,
+        note=note,
+        sender_name=sender_name,
+        sender_phone=sender_phone,
+        sender_postal_code=sender_postal_code,
+        sender_address=sender_address,
+        receiver_name=receiver_name,
+        receiver_phone=receiver_phone,
+        postal_code=postal_code,
+        address=address,
+        status='pending',
+    )
+    for item_data in items:
+        menu_item = get_object_or_404(MenuItem, id=item_data['menu_item_id'])
+        ProduceOrderItem.objects.create(
+            order=order,
+            menu_item=menu_item,
+            quantity=item_data['quantity'],
+        )
+    return JsonResponse({'success': True})

@@ -130,6 +130,25 @@ class ProduceOrder(models.Model):
     # 来店・支払い
     visit_date     = models.DateField('来店予定日', null=True, blank=True)
     payment_method = models.CharField('支払方法', max_length=10, default='cash')
+    # 注文種別
+    ORDER_TYPE_CHOICES = [
+        ('visit',    '来店受取'),
+        ('delivery', '配送（贈答）'),
+    ]
+    order_type = models.CharField(
+        '注文種別', max_length=10,
+        choices=ORDER_TYPE_CHOICES, default='visit'
+    )
+    # 希望配送日
+    delivery_date = models.DateField('希望配送日', null=True, blank=True)
+    # 送り主情報
+    sender_name        = models.CharField('送り主氏名', max_length=100, blank=True)
+    sender_phone       = models.CharField('送り主電話番号', max_length=20, blank=True)
+    sender_postal_code = models.CharField('送り主郵便番号', max_length=8, blank=True)
+    sender_address     = models.TextField('送り主住所', blank=True)
+    # 届け先情報
+    receiver_name  = models.CharField('届け先氏名', max_length=100, blank=True)
+    receiver_phone = models.CharField('届け先電話番号', max_length=20, blank=True)
     # 配送先（贈答用フォームで使用）
     postal_code = models.CharField('郵便番号', max_length=8, blank=True)
     address     = models.TextField('住所', blank=True)
