@@ -6,39 +6,181 @@
   <title>贈答用ぶどう注文 | {{ store.name }}</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { background: #f0e8f5; font-family: -apple-system, BlinkMacSystemFont, 'Hiragino Sans', sans-serif; min-height: 100vh; padding: 1rem; }
-    .frame { background: #f7f0fa; border-radius: 16px; border: 0.5px solid #c9a8d8; overflow: hidden; max-width: 420px; margin: 0 auto; }
-    .header { position: relative; height: 120px; background: #4a1a6e; display: flex; align-items: flex-end; padding: 0 1.25rem 1rem; overflow: hidden; }
-    .header-bg { position: absolute; inset: 0; background-size: cover; background-position: center; opacity: 0.45; }
+
+    body {
+      background: #f0e8f5;
+      font-family: -apple-system, BlinkMacSystemFont, 'Hiragino Sans', sans-serif;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    .frame {
+      background: #f7f0fa;
+      border-radius: 0;
+      border: none;
+      overflow: hidden;
+      max-width: 480px;
+      margin: 0 auto;
+      min-height: 100vh;
+    }
+
+    .header {
+      position: relative;
+      height: 120px;
+      background: #4a1a6e;
+      display: flex;
+      align-items: flex-end;
+      padding: 0 1.25rem 1rem;
+      overflow: hidden;
+    }
+    .header-bg {
+      position: absolute;
+      inset: 0;
+      background-size: cover;
+      background-position: center;
+      opacity: 0.45;
+    }
     .header-title { position: relative; color: #e8c8f5; font-size: 18px; font-weight: 600; letter-spacing: 0.05em; }
     .header-sub { position: relative; color: #d4aee8; font-size: 11px; margin-top: 2px; }
+
     .body { padding: 1.25rem; }
-    .section-title { display: flex; align-items: center; gap: 8px; font-size: 11px; font-weight: 600; color: #6b3a8a; letter-spacing: 0.08em; margin-bottom: 0.75rem; }
+
+    .section-title {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 11px;
+      font-weight: 600;
+      color: #6b3a8a;
+      letter-spacing: 0.08em;
+      margin-bottom: 0.75rem;
+    }
     .section-title::after { content: ''; flex: 1; height: 0.5px; background: #d4aee8; }
-    .notice { background: #f0ddf7; border-radius: 6px; padding: 7px 10px; font-size: 11px; color: #6b3a8a; margin-bottom: 1rem; border-left: 3px solid #4a1a6e; }
-    .grape-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 1.25rem; }
-    .grape-card { background: #fff; border: 0.5px solid #c9a8d8; border-radius: 10px; overflow: hidden; }
-    .grape-img { width: 100%; height: 80px; object-fit: cover; display: block; background: #e8d5f5; }
+
+    .notice {
+      background: #f0ddf7;
+      border-radius: 6px;
+      padding: 7px 10px;
+      font-size: 11px;
+      color: #6b3a8a;
+      margin-bottom: 1rem;
+      border-left: 3px solid #4a1a6e;
+    }
+
+    .grape-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 10px;
+      margin-bottom: 1.25rem;
+    }
+    .grape-card {
+      background: #fff;
+      border: 0.5px solid #c9a8d8;
+      border-radius: 10px;
+      overflow: hidden;
+    }
+    .grape-img {
+      width: 100%;
+      aspect-ratio: 4/3;
+      object-fit: cover;
+      display: block;
+      background: #e8d5f5;
+    }
     .grape-info { padding: 6px 8px 8px; }
-    .grape-badge { display: inline-block; font-size: 9px; background: #f0ddf7; color: #6b3a8a; border-radius: 4px; padding: 1px 5px; margin-bottom: 3px; }
+    .grape-badge {
+      display: inline-block;
+      font-size: 9px;
+      background: #f0ddf7;
+      color: #6b3a8a;
+      border-radius: 4px;
+      padding: 1px 5px;
+      margin-bottom: 3px;
+    }
     .grape-name { font-size: 13px; font-weight: 600; color: #2d1040; margin-bottom: 2px; }
     .grape-price { font-size: 11px; color: #6b3a8a; margin-bottom: 6px; }
     .size-chips { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 4px; }
-    .size-chip { padding: 4px 10px; border-radius: 6px; border: 0.5px solid #c9a8d8; background: #fff; font-size: 12px; color: #6b3a8a; cursor: pointer; }
+    .size-chip {
+      padding: 4px 10px;
+      border-radius: 6px;
+      border: 0.5px solid #c9a8d8;
+      background: #fff;
+      font-size: 12px;
+      color: #6b3a8a;
+      cursor: pointer;
+    }
     .size-chip.selected { background: #4a1a6e; border-color: #4a1a6e; color: #e8c8f5; }
-    .field { width: 100%; padding: 10px 12px; border: 0.5px solid #c9a8d8; border-radius: 8px; font-size: 14px; background: #fff; margin-bottom: 8px; color: #2d1040; }
+
+    .field {
+      width: 100%;
+      padding: 10px 12px;
+      border: 0.5px solid #c9a8d8;
+      border-radius: 8px;
+      font-size: 16px; /* iOSの自動ズーム防止 */
+      background: #fff;
+      margin-bottom: 8px;
+      color: #2d1040;
+      -webkit-appearance: none;
+    }
     .field:focus { outline: none; border-color: #4a1a6e; }
+    .field::placeholder { color: #b88fd0; }
+
     .field-row { display: grid; grid-template-columns: 1fr 2fr; gap: 8px; }
-    .pay-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin-bottom: 1.25rem; }
-    .pay-chip { padding: 9px; border-radius: 8px; border: 0.5px solid #c9a8d8; background: #fff; text-align: center; font-size: 12px; color: #6b3a8a; cursor: pointer; }
+
+    .section-box {
+      background: #fff;
+      border: 0.5px solid #c9a8d8;
+      border-radius: 10px;
+      padding: 12px;
+      margin-bottom: 1.25rem;
+    }
+
+    .pay-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 8px;
+      margin-bottom: 1.25rem;
+    }
+    .pay-chip {
+      padding: 9px;
+      border-radius: 8px;
+      border: 0.5px solid #c9a8d8;
+      background: #fff;
+      text-align: center;
+      font-size: 12px;
+      color: #6b3a8a;
+      cursor: pointer;
+    }
     .pay-chip.selected { background: #4a1a6e; border-color: #4a1a6e; color: #e8c8f5; }
-    .submit-btn { width: 100%; background: #4a1a6e; color: #e8c8f5; border: none; border-radius: 10px; padding: 14px; font-size: 15px; font-weight: 500; cursor: pointer; letter-spacing: 0.03em; }
-    .section-box { background: #fff; border: 0.5px solid #c9a8d8; border-radius: 10px; padding: 12px; margin-bottom: 1.25rem; }
+
+    .submit-btn {
+      width: 100%;
+      background: #4a1a6e;
+      color: #e8c8f5;
+      border: none;
+      border-radius: 10px;
+      padding: 14px;
+      font-size: 15px;
+      font-weight: 500;
+      cursor: pointer;
+      letter-spacing: 0.03em;
+      -webkit-appearance: none;
+    }
+
     .complete { display: none; text-align: center; padding: 2.5rem 1rem; }
     .complete-icon { font-size: 48px; margin-bottom: 1rem; }
     .complete-title { font-size: 18px; font-weight: 600; color: #4a1a6e; margin-bottom: 0.75rem; }
     .complete-text { font-size: 13px; color: #6b3a8a; line-height: 1.8; }
-    .error-msg { background: #fdf0f0; border: 0.5px solid #e8b0b0; border-radius: 6px; padding: 8px 12px; font-size: 12px; color: #a83030; margin-bottom: 1rem; display: none; }
+
+    .error-msg {
+      background: #fdf0f0;
+      border: 0.5px solid #e8b0b0;
+      border-radius: 6px;
+      padding: 8px 12px;
+      font-size: 12px;
+      color: #a83030;
+      margin-bottom: 1rem;
+      display: none;
+    }
   </style>
 </head>
 <body>
@@ -51,7 +193,7 @@
       </div>
     </div>
 
-<div class="body" id="order-form">
+    <div class="body" id="order-form">
       <div class="notice">
         ご注文後、オーナーが在庫を確認してからご連絡いたします。<br>
         確認後に決済方法をご案内します。
@@ -84,9 +226,9 @@
       <!-- 申込者情報 -->
       <div class="section-title">申込者情報</div>
       <div class="section-box">
-        <input class="field" id="customer_name" type="text" placeholder="お名前（必須）" />
-        <input class="field" id="customer_phone" type="tel" placeholder="電話番号（必須）" />
-        <input class="field" id="customer_email" type="email" placeholder="メールアドレス（必須）" />
+        <input class="field" id="customer_name" type="text" placeholder="お名前（必須）" autocomplete="name" />
+        <input class="field" id="customer_phone" type="tel" placeholder="電話番号（必須）" autocomplete="tel" />
+        <input class="field" id="customer_email" type="email" placeholder="メールアドレス（必須）" autocomplete="email" />
       </div>
 
       <!-- 送り主情報 -->
@@ -141,7 +283,7 @@
     </div>
   </div>
 
-<script>
+  <script>
     const storeSlug = "{{ store.slug }}";
     let selectedSizes = {};
     let paymentMethod = 'bank';
@@ -177,6 +319,7 @@
       const el = document.getElementById('error-msg');
       el.textContent = msg;
       el.style.display = 'block';
+      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }
 
     async function submitOrder() {
