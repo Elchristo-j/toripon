@@ -139,14 +139,13 @@ class ProduceOrder(models.Model):
     visit_date     = models.DateField('来店予定日', null=True, blank=True)
     # 支払い
     payment_method = models.CharField('支払方法', max_length=10, default='cash')
-    # 希望配送日（配送注文の共通日付）
-    delivery_date  = models.DateField('希望配送日', null=True, blank=True)
     # 送り主情報（配送注文）
     sender_name        = models.CharField('送り主氏名', max_length=100, blank=True)
     sender_phone       = models.CharField('送り主電話番号', max_length=20, blank=True)
     sender_postal_code = models.CharField('送り主郵便番号', max_length=8, blank=True)
     sender_address     = models.TextField('送り主住所', blank=True)
-    # 旧・届け先フィールド（後方互換のため残す）
+    # 旧フィールド（後方互換のため残す）
+    delivery_date  = models.DateField('希望配送日', null=True, blank=True)
     receiver_name  = models.CharField('届け先氏名', max_length=100, blank=True)
     receiver_phone = models.CharField('届け先電話番号', max_length=20, blank=True)
     postal_code    = models.CharField('郵便番号', max_length=8, blank=True)
@@ -175,17 +174,25 @@ class ProduceOrder(models.Model):
 
 
 class DeliveryAddress(models.Model):
-    """届け先（複数対応）"""
+    """届け先（複数対応）・品種・箱サイズを届け先ごとに管理"""
+    BOX_SIZE_CHOICES = [
+        (1, '1kg箱'),
+        (2, '2kg箱'),
+        (5, '5kg箱'),
+    ]
     order = models.ForeignKey(
         ProduceOrder, on_delete=models.CASCADE,
         related_name='delivery_addresses', verbose_name='注文'
     )
-    index        = models.PositiveIntegerField('届け先番号', default=1)  # 1始まり
+    index          = models.PositiveIntegerField('届け先番号', default=1)
     receiver_name  = models.CharField('届け先氏名', max_length=100)
     receiver_phone = models.CharField('届け先電話番号', max_length=20, blank=True)
     postal_code    = models.CharField('郵便番号', max_length=8, blank=True)
     address        = models.TextField('住所')
-    note           = models.TextField('個別備考', blank=True)
+    delivery_date  = models.DateField('希望配送日', null=True, blank=True)
+    box_size       = models.PositiveIntegerField('箱サイズ（kg）', choices=BOX_SIZE_CHOICES, default=2)
+    box_count      = models.PositiveIntegerField('箱数', default=1)
+    note           = models.TextField('個別備考（のし・比率など）', blank=True)
 
     class Meta:
         ordering = ['index']
@@ -196,8 +203,27 @@ class DeliveryAddress(models.Model):
         return f'#{self.order.pk} 届け先{self.index}：{self.receiver_name}'
 
 
+class DeliveryAddressItem(models.Model):
+    """届け先ごとの品種選択"""
+    address = models.ForeignKey(
+        DeliveryAddress, on_delete=models.CASCADE,
+        related_name='items', verbose_name='届け先'
+    )
+    menu_item = models.ForeignKey(
+        MenuItem, on_delete=models.PROTECT,
+        verbose_name='品種'
+    )
+
+    class Meta:
+        verbose_name = '品種選択'
+        verbose_name_plural = '品種選択'
+
+    def __str__(self):
+        return f'{self.address} / {self.menu_item.name}'
+
+
 class ProduceOrderItem(models.Model):
-    """直売注文の明細"""
+    """直売注文の明細（来店注文用）"""
     order = models.ForeignKey(
         ProduceOrder, on_delete=models.CASCADE,
         related_name='produce_items', verbose_name='注文'
