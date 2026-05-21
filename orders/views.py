@@ -1,245 +1,415 @@
-from django.db import models
 from accounts.models import Store
+from django.shortcuts import render, get_object_or_404
+from django.http import JsonResponse
+from django.views.decorators.http import require_POST
+from django.contrib.auth.decorators import login_required
+from django.utils import timezone
+import json
+
+from .models import MenuCategory, MenuItem, Order, OrderItem
+from reservations.models import Seat
+from django.db.models import Sum, F
+from datetime import timedelta
+
+ADMIN_ROLES = ['chief_administrator', 'administrator']
 
 
-class MenuCategory(models.Model):
-    store = models.ForeignKey(
-        Store, on_delete=models.CASCADE,
-        related_name='menu_categories', verbose_name='店舗',
-        null=True, blank=True
+def order_menu(request, seat_code, store_slug=None):
+    seat = get_object_or_404(Seat, code=seat_code)
+    categories = MenuCategory.objects.prefetch_related('items').filter(
+        store__slug=store_slug
+    ) if store_slug else MenuCategory.objects.prefetch_related('items').all()
+    session_key = f'order_id_{seat_code}'
+    order_id = request.session.get(session_key)
+    if order_id:
+        try:
+            order = Order.objects.get(id=order_id, status='open')
+        except Order.DoesNotExist:
+            order = Order.objects.create(seat_code=seat_code, status='open')
+            request.session[session_key] = order.id
+    else:
+        order = Order.objects.create(seat_code=seat_code, status='open')
+        request.session[session_key] = order.id
+    return render(request, 'orders/menu.html', {'seat': seat, 'categories': categories, 'order': order})
+
+
+@require_POST
+def order_submit(request):
+    data = json.loads(request.body)
+    order_id = data.get('order_id')
+    items = data.get('items', [])
+    order = get_object_or_404(Order, id=order_id)
+    for item_data in items:
+        menu_item = get_object_or_404(MenuItem, id=item_data['menu_item_id'])
+        OrderItem.objects.create(
+            order=order, menu_item=menu_item,
+            quantity=item_data['quantity'], status='pending',
+        )
+    return JsonResponse({'success': True})
+
+
+@login_required
+def staff_order_list(request):
+    user = request.user
+    if user.role in ADMIN_ROLES:
+        orders = Order.objects.filter(status='open')
+    else:
+        orders = Order.objects.filter(status='open', store=user.store)
+    orders = orders.prefetch_related('items__menu_item').order_by('created_at')
+    return render(request, 'orders/staff_order_list.html', {'orders': orders})
+
+
+@login_required
+@require_POST
+def staff_order_merge(request):
+    data = json.loads(request.body)
+    order_ids = data.get('order_ids', [])
+    if len(order_ids) < 2:
+        return JsonResponse({'success': False, 'error': '2件以上選択してください'})
+    import uuid
+    group_id = str(uuid.uuid4())[:8]
+    Order.objects.filter(id__in=order_ids).update(group_id=group_id)
+    return JsonResponse({'success': True, 'group_id': group_id})
+
+
+@login_required
+@require_POST
+def staff_order_close(request):
+    data = json.loads(request.body)
+    order_id = data.get('order_id')
+    group_id = data.get('group_id')
+    if group_id:
+        Order.objects.filter(group_id=group_id).update(status='closed')
+    else:
+        Order.objects.filter(id=order_id).update(status='closed')
+    return JsonResponse({'success': True})
+
+
+@login_required
+def dashboard(request):
+    user = request.user
+    if user.role in ADMIN_ROLES:
+        store_filter = {}
+        order_filter = {}
+    else:
+        store_filter = {'order__store': user.store}
+        order_filter = {'store': user.store}
+
+    today = timezone.localdate()
+    today_closed = Order.objects.filter(created_at__date=today, status='closed', **order_filter)
+    today_open   = Order.objects.filter(created_at__date=today, status='open',   **order_filter)
+
+    today_sales = OrderItem.objects.filter(
+        order__created_at__date=today, order__status='closed', **store_filter
+    ).aggregate(total=Sum(F('menu_item__price') * F('quantity')))['total'] or 0
+
+    today_order_count = today_closed.count()
+    avg_per_order = int(today_sales / today_order_count) if today_order_count else 0
+
+    unpaid_total = OrderItem.objects.filter(
+        order__created_at__date=today, order__status='open', **store_filter
+    ).aggregate(total=Sum(F('menu_item__price') * F('quantity')))['total'] or 0
+    unpaid_count = today_open.count()
+
+    yesterday = today - timedelta(days=1)
+    yesterday_sales = OrderItem.objects.filter(
+        order__created_at__date=yesterday, order__status='closed', **store_filter
+    ).aggregate(total=Sum(F('menu_item__price') * F('quantity')))['total'] or 0
+    day_over_day = round((today_sales - yesterday_sales) / yesterday_sales * 100, 1) if yesterday_sales > 0 else None
+
+    seat_sales_qs = OrderItem.objects.filter(
+        order__created_at__date=today, **store_filter
+    ).values('order__seat_code', 'order__status').annotate(
+        total=Sum(F('menu_item__price') * F('quantity'))
     )
-    name = models.CharField('カテゴリ名', max_length=50)
-    order = models.PositiveIntegerField('表示順', default=0)
-    is_active = models.BooleanField('有効', default=True)
+    ALL_SEATS = ['C-1','C-2','C-3','C-4','C-5','C-6','T-1','T-2','T-3','K-1','K-2','K-3','K-4']
+    seat_dict = {s: {'total': 0, 'status': 'unused'} for s in ALL_SEATS}
+    for row in seat_sales_qs:
+        code = row['order__seat_code']
+        if code in seat_dict:
+            seat_dict[code]['total'] += row['total'] or 0
+            if row['order__status'] == 'open':
+                seat_dict[code]['status'] = 'open'
+            elif seat_dict[code]['status'] == 'unused':
+                seat_dict[code]['status'] = 'closed'
+    seat_list = [{'code': c, 'status': d['status'], 'total': d['total']} for c, d in seat_dict.items()]
 
-    class Meta:
-        ordering = ['order']
-        verbose_name = 'メニューカテゴリ'
-        verbose_name_plural = 'メニューカテゴリ'
+    drink_ranking = OrderItem.objects.filter(
+        order__created_at__date=today,
+        menu_item__category__name__in=['ドリンク', 'drink', 'drinks'], **store_filter
+    ).values('menu_item__name').annotate(cnt=Sum('quantity')).order_by('-cnt')[:5]
 
-    def __str__(self):
-        return f'{self.store.name} / {self.name}'
+    food_ranking = OrderItem.objects.filter(
+        order__created_at__date=today, **store_filter
+    ).exclude(
+        menu_item__category__name__in=['ドリンク', 'drink', 'drinks']
+    ).values('menu_item__name').annotate(cnt=Sum('quantity')).order_by('-cnt')[:5]
+
+    month_start = today.replace(day=1)
+    month_sales = OrderItem.objects.filter(
+        order__created_at__date__gte=month_start, order__status='closed', **store_filter
+    ).aggregate(total=Sum(F('menu_item__price') * F('quantity')))['total'] or 0
+    month_order_count = Order.objects.filter(
+        created_at__date__gte=month_start, status='closed', **order_filter
+    ).count()
+
+    year_start = today.replace(month=1, day=1)
+    year_sales = OrderItem.objects.filter(
+        order__created_at__date__gte=year_start, order__status='closed', **store_filter
+    ).aggregate(total=Sum(F('menu_item__price') * F('quantity')))['total'] or 0
+
+    weekly_data = []
+    for i in range(6, -1, -1):
+        d = today - timedelta(days=i)
+        s = OrderItem.objects.filter(
+            order__created_at__date=d, order__status='closed', **store_filter
+        ).aggregate(total=Sum(F('menu_item__price') * F('quantity')))['total'] or 0
+        weekly_data.append({'date': d.strftime('%-m/%-d'), 'sales': int(s)})
+
+    last_week_start = today - timedelta(days=today.weekday() + 7)
+    last_week_end   = last_week_start + timedelta(days=6)
+    last_drink_ranking = OrderItem.objects.filter(
+        order__created_at__date__range=[last_week_start, last_week_end],
+        order__status='closed',
+        menu_item__category__name__in=['ドリンク', 'drink', 'drinks'], **store_filter
+    ).values('menu_item__name').annotate(cnt=Sum('quantity')).order_by('-cnt')[:5]
+    last_food_ranking = OrderItem.objects.filter(
+        order__created_at__date__range=[last_week_start, last_week_end],
+        order__status='closed', **store_filter
+    ).exclude(
+        menu_item__category__name__in=['ドリンク', 'drink', 'drinks']
+    ).values('menu_item__name').annotate(cnt=Sum('quantity')).order_by('-cnt')[:5]
+
+    context = {
+        'today': today,
+        'today_sales': today_sales,
+        'today_order_count': today_order_count,
+        'avg_per_order': avg_per_order,
+        'unpaid_count': unpaid_count,
+        'unpaid_total': unpaid_total,
+        'day_over_day': day_over_day,
+        'seat_list': seat_list,
+        'drink_ranking': list(drink_ranking),
+        'food_ranking': list(food_ranking),
+        'month_sales': month_sales,
+        'month_order_count': month_order_count,
+        'year_sales': year_sales,
+        'weekly_data': json.dumps(weekly_data, ensure_ascii=False),
+        'last_drink_ranking': list(last_drink_ranking),
+        'last_food_ranking': list(last_food_ranking),
+    }
+    return render(request, 'orders/dashboard.html', context)
 
 
-class MenuItem(models.Model):
-    category = models.ForeignKey(
-        MenuCategory, on_delete=models.CASCADE,
-        related_name='items', verbose_name='カテゴリ'
+@login_required
+def produce_staff_list(request):
+    """生産者向け予約・注文管理画面（来店 + 配送）"""
+    from .models import ProduceOrder
+    user = request.user
+    if user.role in ADMIN_ROLES:
+        store = None
+        orders = ProduceOrder.objects.prefetch_related(
+            'produce_items__menu_item',
+            'delivery_addresses__items__menu_item',
+        ).all()
+    else:
+        store = user.store
+        orders = ProduceOrder.objects.filter(store=store).prefetch_related(
+            'produce_items__menu_item',
+            'delivery_addresses__items__menu_item',
+        )
+
+    pending_count   = orders.filter(status='pending').count()
+    confirmed_count = orders.filter(status='confirmed').count()
+
+    return render(request, 'orders/produce_staff_list.html', {
+        'store': store or user.store,
+        'orders': orders.order_by('-created_at'),
+        'pending_count': pending_count,
+        'confirmed_count': confirmed_count,
+    })
+
+
+@login_required
+@require_POST
+def produce_staff_action(request):
+    from .models import ProduceOrder
+    from django.core.mail import send_mail
+    from django.conf import settings
+
+    data     = json.loads(request.body)
+    order_id = data.get('order_id')
+    action   = data.get('action')
+
+    order = get_object_or_404(ProduceOrder, id=order_id)
+    if action not in ['confirmed', 'rejected']:
+        return JsonResponse({'success': False, 'error': '不正なアクションです'})
+
+    order.status = action
+    order.save()
+
+    store_name    = order.store.name
+    customer_name = order.customer_name
+
+    if order.order_type == 'delivery':
+        if action == 'confirmed':
+            subject = f'【{store_name}】ご注文を受け付けました'
+            message = (
+                f'{customer_name} 様\n\n'
+                f'贈答用ぶどうのご注文を受け付けました。\n'
+                f'お支払方法についてのご案内を別途送付いたします。\n\n'
+                f'{store_name}'
+            )
+        else:
+            subject = f'【{store_name}】ご注文について'
+            message = (
+                f'{customer_name} 様\n\n'
+                f'誠に申し訳ございませんが、ご希望の品種・数量の在庫が確保できない状況です。\n'
+                f'またのご注文をお待ちしております。\n\n'
+                f'{store_name}'
+            )
+    else:
+        visit_date = order.visit_date.strftime('%m月%d日') if order.visit_date else ''
+        if action == 'confirmed':
+            subject = f'【{store_name}】ご予約を受け付けました'
+            message = (
+                f'{customer_name} 様\n\n'
+                f'{visit_date}のご予約を受け付けました。\n'
+                f'当日お待ちしております。\n\n'
+                f'キャンセルの場合はお電話にてご連絡ください。\n\n'
+                f'{store_name}'
+            )
+        else:
+            subject = f'【{store_name}】ご予約について'
+            message = (
+                f'{customer_name} 様\n\n'
+                f'{visit_date}のご予約ですが、誠に申し訳ございません。\n'
+                f'本日は予約でいっぱいとなっております。\n'
+                f'またのご予約をお待ちしております。\n\n'
+                f'{store_name}'
+            )
+
+    try:
+        send_mail(subject, message, settings.DEFAULT_FROM_EMAIL,
+                  [order.customer_email], fail_silently=True)
+    except Exception:
+        pass
+
+    return JsonResponse({'success': True})
+
+
+def produce_order_form(request, store_slug):
+    store = get_object_or_404(Store, slug=store_slug, is_active=True)
+    menu_items = MenuItem.objects.filter(
+        category__store=store, is_available=True,
+    ).order_by('order')
+    return render(request, 'orders/produce_order_form.html', {
+        'store': store, 'menu_items': menu_items,
+    })
+
+
+@require_POST
+def produce_order_submit(request, store_slug):
+    store = get_object_or_404(Store, slug=store_slug, is_active=True)
+    try:
+        data = json.loads(request.body)
+    except json.JSONDecodeError:
+        return JsonResponse({'success': False, 'error': '不正なリクエストです'})
+
+    visit_date     = data.get('visit_date', '').strip()
+    customer_name  = data.get('customer_name', '').strip()
+    customer_email = data.get('customer_email', '').strip()
+    customer_phone = data.get('customer_phone', '').strip()
+    payment_method = data.get('payment_method', 'cash')
+    items          = data.get('items', [])
+
+    if not all([visit_date, customer_name, customer_email, customer_phone]):
+        return JsonResponse({'success': False, 'error': '必須項目が入力されていません'})
+    if not items:
+        return JsonResponse({'success': False, 'error': '品種を1つ以上選んでください'})
+
+    from .models import ProduceOrder, ProduceOrderItem
+    order = ProduceOrder.objects.create(
+        store=store, order_type='visit',
+        customer_name=customer_name, customer_phone=customer_phone,
+        customer_email=customer_email, visit_date=visit_date,
+        payment_method=payment_method, status='pending',
     )
-    name = models.CharField('メニュー名', max_length=100)
-    description = models.TextField('説明', blank=True)
-    price = models.PositiveIntegerField('価格（円）')
-    image = models.ImageField('写真', upload_to='menu/', blank=True, null=True)
-    is_available = models.BooleanField('提供中', default=True)
-    order = models.PositiveIntegerField('表示順', default=0)
-    badge = models.CharField('バッジ（例：人気No.1）', max_length=20, blank=True)
-    image_url = models.URLField('画像URL（Cloudinary）', blank=True)
-    unit = models.CharField('単位（例：房・袋）', max_length=10, default='房')
+    for item_data in items:
+        menu_item = get_object_or_404(MenuItem, id=item_data['menu_item_id'])
+        ProduceOrderItem.objects.create(order=order, menu_item=menu_item, quantity=item_data['quantity'])
 
-    class Meta:
-        ordering = ['order']
-        verbose_name = 'メニュー'
-        verbose_name_plural = 'メニュー'
-
-    def __str__(self):
-        return f'{self.name}（{self.price}円）'
+    return JsonResponse({'success': True, 'order_id': order.id})
 
 
-class Order(models.Model):
-    STATUS_CHOICES = [
-        ('open',   '注文中'),
-        ('closed', '会計済み'),
-    ]
-    store = models.ForeignKey(
-        Store, on_delete=models.CASCADE,
-        related_name='orders', verbose_name='店舗',
-        null=True, blank=True
-    )
-    reservation = models.ForeignKey(
-        'reservations.Reservation',
-        on_delete=models.SET_NULL,
-        null=True, blank=True,
-    )
-    seat_code = models.CharField('席コード', max_length=20, blank=True, default='')
-    group_id = models.CharField('グループID', max_length=50, blank=True, default='')
-    status = models.CharField('ステータス', max_length=10,
-                              choices=STATUS_CHOICES, default='open')
-    created_at = models.DateTimeField('作成日時', auto_now_add=True)
-
-    class Meta:
-        verbose_name = '注文'
-        verbose_name_plural = '注文'
-
-    def __str__(self):
-        return f'注文#{self.pk}（{self.seat_code}）'
-
-    def total_price(self):
-        return sum(item.subtotal() for item in self.items.all())
+def delivery_order_form(request, store_slug):
+    store = get_object_or_404(Store, slug=store_slug, is_active=True)
+    menu_items = MenuItem.objects.filter(
+        category__store=store, is_available=True,
+    ).order_by('order')
+    return render(request, 'orders/delivery_order_form.html', {
+        'store': store, 'menu_items': menu_items,
+    })
 
 
-class OrderItem(models.Model):
-    STATUS_CHOICES = [
-        ('pending',  '未着手'),
-        ('cooking',  '調理中'),
-        ('served',   '提供済み'),
-    ]
-    order = models.ForeignKey(
-        Order, on_delete=models.CASCADE,
-        related_name='items', verbose_name='注文'
-    )
-    menu_item = models.ForeignKey(
-        MenuItem, on_delete=models.PROTECT,
-        verbose_name='メニュー'
-    )
-    quantity = models.PositiveIntegerField('数量', default=1)
-    status = models.CharField('ステータス', max_length=10,
-                              choices=STATUS_CHOICES, default='pending')
-    created_at = models.DateTimeField('注文日時', auto_now_add=True)
+@require_POST
+def delivery_order_submit(request, store_slug):
+    store = get_object_or_404(Store, slug=store_slug, is_active=True)
+    try:
+        data = json.loads(request.body)
+    except json.JSONDecodeError:
+        return JsonResponse({'success': False, 'error': '不正なリクエストです'})
 
-    class Meta:
-        verbose_name = '注文明細'
-        verbose_name_plural = '注文明細'
+    customer_name      = data.get('customer_name', '').strip()
+    customer_phone     = data.get('customer_phone', '').strip()
+    customer_email     = data.get('customer_email', '').strip()
+    payment_method     = data.get('payment_method', 'bank')
+    note               = data.get('note', '').strip()
+    sender_name        = data.get('sender_name', '').strip()
+    sender_phone       = data.get('sender_phone', '').strip()
+    sender_postal_code = data.get('sender_postal_code', '').strip()
+    sender_address     = data.get('sender_address', '').strip()
+    addresses          = data.get('addresses', [])
 
-    def __str__(self):
-        return f'{self.menu_item.name} × {self.quantity}'
+    if not all([customer_name, customer_phone, customer_email]):
+        return JsonResponse({'success': False, 'error': '必須項目が入力されていません'})
+    if not all([sender_name, sender_phone, sender_postal_code, sender_address]):
+        return JsonResponse({'success': False, 'error': '送り主情報を入力してください'})
+    if not addresses:
+        return JsonResponse({'success': False, 'error': '届け先を1件以上入力してください'})
 
-    def subtotal(self):
-        return self.menu_item.price * self.quantity
-
-
-# ──────────────────────────────────────────
-# 農産物直売所向けモデル
-# ──────────────────────────────────────────
-
-class ProduceOrder(models.Model):
-    """農産物直売所向け注文モデル"""
-    STATUS_CHOICES = [
-        ('pending',   '未確認'),
-        ('confirmed', '確認済み・OK'),
-        ('rejected',  'お断り'),
-        ('shipped',   '発送済み'),
-    ]
-    ORDER_TYPE_CHOICES = [
-        ('visit',    '来店受取'),
-        ('delivery', '配送（贈答）'),
-    ]
-    store = models.ForeignKey(
-        Store, on_delete=models.CASCADE,
-        related_name='produce_orders', verbose_name='店舗'
-    )
-    order_type = models.CharField(
-        '注文種別', max_length=10,
-        choices=ORDER_TYPE_CHOICES, default='visit'
-    )
-    # 申込者情報
-    customer_name  = models.CharField('お名前', max_length=100)
-    customer_phone = models.CharField('電話番号', max_length=20)
-    customer_email = models.EmailField('メールアドレス', blank=True)
-    # 来店
-    visit_date     = models.DateField('来店予定日', null=True, blank=True)
-    # 支払い
-    payment_method = models.CharField('支払方法', max_length=10, default='cash')
-    # 送り主情報（配送注文）
-    sender_name        = models.CharField('送り主氏名', max_length=100, blank=True)
-    sender_phone       = models.CharField('送り主電話番号', max_length=20, blank=True)
-    sender_postal_code = models.CharField('送り主郵便番号', max_length=8, blank=True)
-    sender_address     = models.TextField('送り主住所', blank=True)
-    # 旧フィールド（後方互換のため残す）
-    delivery_date  = models.DateField('希望配送日', null=True, blank=True)
-    receiver_name  = models.CharField('届け先氏名', max_length=100, blank=True)
-    receiver_phone = models.CharField('届け先電話番号', max_length=20, blank=True)
-    postal_code    = models.CharField('郵便番号', max_length=8, blank=True)
-    address        = models.TextField('住所', blank=True)
-    # 決済
-    stripe_payment_intent = models.CharField(
-        'Stripe PaymentIntent ID', max_length=200, blank=True
-    )
-    is_paid = models.BooleanField('決済済み', default=False)
-    # ステータス・備考
-    status     = models.CharField('ステータス', max_length=10,
-                                  choices=STATUS_CHOICES, default='pending')
-    note       = models.TextField('備考', blank=True)
-    created_at = models.DateTimeField('注文日時', auto_now_add=True)
-
-    class Meta:
-        verbose_name = '直売注文'
-        verbose_name_plural = '直売注文'
-        ordering = ['-created_at']
-
-    def __str__(self):
-        return f'直売注文#{self.pk}（{self.customer_name}）'
-
-    def total_price(self):
-        return sum(item.subtotal() for item in self.produce_items.all())
-
-
-class DeliveryAddress(models.Model):
-    """届け先（複数対応）・品種・箱サイズを届け先ごとに管理"""
-    BOX_SIZE_CHOICES = [
-        (1, '1kg箱'),
-        (2, '2kg箱'),
-        (5, '5kg箱'),
-    ]
-    order = models.ForeignKey(
-        ProduceOrder, on_delete=models.CASCADE,
-        related_name='delivery_addresses', verbose_name='注文'
-    )
-    index          = models.PositiveIntegerField('届け先番号', default=1)
-    receiver_name  = models.CharField('届け先氏名', max_length=100)
-    receiver_phone = models.CharField('届け先電話番号', max_length=20, blank=True)
-    postal_code    = models.CharField('郵便番号', max_length=8, blank=True)
-    address        = models.TextField('住所')
-    delivery_date  = models.DateField('希望配送日', null=True, blank=True)
-    box_size       = models.PositiveIntegerField('箱サイズ（kg）', choices=BOX_SIZE_CHOICES, default=2)
-    box_count      = models.PositiveIntegerField('箱数', default=1)
-    note           = models.TextField('個別備考（のし・比率など）', blank=True)
-
-    class Meta:
-        ordering = ['index']
-        verbose_name = '届け先'
-        verbose_name_plural = '届け先'
-
-    def __str__(self):
-        return f'#{self.order.pk} 届け先{self.index}：{self.receiver_name}'
-
-
-class DeliveryAddressItem(models.Model):
-    """届け先ごとの品種選択"""
-    address = models.ForeignKey(
-        DeliveryAddress, on_delete=models.CASCADE,
-        related_name='items', verbose_name='届け先'
-    )
-    menu_item = models.ForeignKey(
-        MenuItem, on_delete=models.PROTECT,
-        verbose_name='品種'
+    from .models import ProduceOrder, DeliveryAddress, DeliveryAddressItem
+    order = ProduceOrder.objects.create(
+        store=store, order_type='delivery',
+        customer_name=customer_name, customer_phone=customer_phone,
+        customer_email=customer_email,
+        payment_method=payment_method, note=note,
+        sender_name=sender_name, sender_phone=sender_phone,
+        sender_postal_code=sender_postal_code, sender_address=sender_address,
+        status='pending',
     )
 
-    class Meta:
-        verbose_name = '品種選択'
-        verbose_name_plural = '品種選択'
+    for addr_data in addresses:
+        addr = DeliveryAddress.objects.create(
+            order=order,
+            index=addr_data.get('index', 1),
+            receiver_name=addr_data.get('receiver_name', ''),
+            receiver_phone=addr_data.get('receiver_phone', ''),
+            postal_code=addr_data.get('postal_code', ''),
+            address=addr_data.get('address', ''),
+            delivery_date=addr_data.get('delivery_date') or None,
+            box_size=addr_data.get('box_size', 2),
+            box_count=addr_data.get('box_count', 1),
+            note=addr_data.get('note', ''),
+        )
+        for item_id in addr_data.get('item_ids', []):
+            menu_item = MenuItem.objects.filter(id=item_id).first()
+            if menu_item:
+                DeliveryAddressItem.objects.create(address=addr, menu_item=menu_item)
 
-    def __str__(self):
-        return f'{self.address} / {self.menu_item.name}'
+    return JsonResponse({'success': True})
 
 
-class ProduceOrderItem(models.Model):
-    """直売注文の明細（来店注文用）"""
-    order = models.ForeignKey(
-        ProduceOrder, on_delete=models.CASCADE,
-        related_name='produce_items', verbose_name='注文'
-    )
-    menu_item = models.ForeignKey(
-        MenuItem, on_delete=models.PROTECT,
-        verbose_name='商品'
-    )
-    quantity = models.PositiveIntegerField('数量', default=1)
-
-    class Meta:
-        verbose_name = '直売注文明細'
-        verbose_name_plural = '直売注文明細'
-
-    def __str__(self):
-        return f'{self.menu_item.name} × {self.quantity}'
-
-    def subtotal(self):
-        return self.menu_item.price * self.quantity
+def top(request):
+    stores = Store.objects.filter(is_active=True).order_by('created_at')
+    return render(request, 'orders/top.html', {'stores': stores})
