@@ -33,38 +33,37 @@
     .address-block-title { font-size: 13px; font-weight: 600; color: #4a1a6e; }
     .btn-remove-address { background: none; border: none; color: #a83030; font-size: 12px; cursor: pointer; padding: 2px 6px; }
 
-    /* 品種選択（チェックボックス式） */
-    .grape-check-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px; margin-bottom: 10px; }
-    .grape-check-item { display: flex; align-items: center; gap: 8px; background: #f7f0fa; border: 0.5px solid #c9a8d8; border-radius: 8px; padding: 8px 10px; cursor: pointer; transition: background 0.15s; }
+    .sub-label { font-size: 11px; color: #6b3a8a; font-weight: 600; letter-spacing: 0.06em; margin: 10px 0 6px; }
+
+    /* 品種選択（番号付きチェックボックス） */
+    .grape-check-list { display: flex; flex-direction: column; gap: 6px; margin-bottom: 10px; }
+    .grape-check-item { display: flex; align-items: center; gap: 10px; background: #f7f0fa; border: 0.5px solid #c9a8d8; border-radius: 8px; padding: 9px 12px; cursor: pointer; transition: background 0.15s; }
     .grape-check-item.checked { background: #ede0fa; border-color: #9a6ab0; }
-    .grape-check-item input[type="checkbox"] { display: none; }
-    .grape-check-dot { width: 16px; height: 16px; border-radius: 50%; border: 1.5px solid #c9a8d8; flex-shrink: 0; display: flex; align-items: center; justify-content: center; }
-    .grape-check-item.checked .grape-check-dot { background: #4a1a6e; border-color: #4a1a6e; }
-    .grape-check-dot::after { content: '✓'; color: #fff; font-size: 10px; display: none; }
-    .grape-check-item.checked .grape-check-dot::after { display: block; }
-    .grape-check-name { font-size: 12px; color: #2d1040; font-weight: 500; line-height: 1.3; }
+    .grape-num { width: 22px; height: 22px; border-radius: 50%; background: #d4aee8; color: #4a1a6e; font-size: 11px; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+    .grape-check-item.checked .grape-num { background: #4a1a6e; color: #fff; }
+    .grape-check-name { font-size: 13px; color: #2d1040; font-weight: 500; flex: 1; }
+    .grape-check-mark { font-size: 14px; color: #9a6ab0; }
+    .grape-check-item.checked .grape-check-mark { color: #4a1a6e; font-weight: 700; }
 
-    /* 比率メモ（2種以上で表示） */
-    .ratio-notice { background: #fef9e8; border: 0.5px solid #e8d888; border-radius: 6px; padding: 7px 10px; font-size: 11px; color: #6b5010; margin-bottom: 8px; display: none; }
+    /* 比率ヒント */
+    .ratio-notice { background: #fef9e8; border: 0.5px solid #e8d888; border-radius: 6px; padding: 7px 10px; font-size: 11px; color: #6b5010; margin-bottom: 10px; display: none; }
 
-    /* 箱サイズ */
-    .box-size-row { display: flex; gap: 8px; margin-bottom: 10px; }
-    .box-chip { flex: 1; padding: 10px 4px; border-radius: 8px; border: 0.5px solid #c9a8d8; background: #fff; text-align: center; cursor: pointer; }
-    .box-chip.selected { background: #4a1a6e; border-color: #4a1a6e; }
-    .box-chip .box-kg { font-size: 15px; font-weight: 600; color: #2d1040; }
-    .box-chip.selected .box-kg { color: #fff; }
-    .box-chip .box-label { font-size: 9px; color: #9a6ab0; margin-top: 1px; }
-    .box-chip.selected .box-label { color: #d4aee8; }
+    /* 箱サイズ・箱数 */
+    .box-sizes { display: flex; flex-direction: column; gap: 8px; margin-bottom: 10px; }
+    .box-size-row { display: flex; align-items: center; gap: 10px; }
+    .box-size-label { font-size: 12px; font-weight: 600; color: #4a1a6e; width: 52px; flex-shrink: 0; }
+    .qty-btn { width: 28px; height: 28px; border-radius: 50%; border: 0.5px solid #c9a8d8; background: #f0ddf7; display: flex; align-items: center; justify-content: center; font-size: 16px; color: #4a1a6e; cursor: pointer; user-select: none; flex-shrink: 0; }
+    .qty-num { font-size: 15px; font-weight: 600; color: #2d1040; min-width: 20px; text-align: center; }
+    .qty-unit { font-size: 12px; color: #9a6ab0; }
 
-    /* 箱数 */
-    .count-row { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
-    .count-label { font-size: 12px; color: #6b3a8a; white-space: nowrap; }
-    .qty-btn { width: 30px; height: 30px; border-radius: 50%; border: 0.5px solid #c9a8d8; background: #f0ddf7; display: flex; align-items: center; justify-content: center; font-size: 18px; color: #4a1a6e; cursor: pointer; user-select: none; flex-shrink: 0; }
-    .qty-num { font-size: 16px; font-weight: 600; color: #2d1040; min-width: 24px; text-align: center; }
+    /* 合計表示 */
+    .total-box { background: #4a1a6e; border-radius: 8px; padding: 8px 12px; margin-bottom: 10px; display: flex; align-items: center; justify-content: space-between; }
+    .total-box .total-label { font-size: 11px; color: #d4aee8; }
+    .total-box .total-value { font-size: 16px; font-weight: 700; color: #fff; }
+    .total-box .total-value span { font-size: 11px; font-weight: 400; color: #d4aee8; margin-left: 2px; }
 
     .btn-add-address { width: 100%; padding: 11px; border-radius: 8px; border: 1px dashed #c9a8d8; background: #f7f0fa; color: #6b3a8a; font-size: 13px; cursor: pointer; margin-bottom: 1.25rem; }
 
-    /* 支払 */
     .pay-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin-bottom: 1.25rem; }
     .pay-chip { padding: 9px; border-radius: 8px; border: 0.5px solid #c9a8d8; background: #fff; text-align: center; font-size: 12px; color: #6b3a8a; cursor: pointer; }
     .pay-chip.selected { background: #4a1a6e; border-color: #4a1a6e; color: #e8c8f5; }
@@ -110,12 +109,12 @@
         <input class="field" id="sender_name" type="text" placeholder="氏名（必須）" />
         <input class="field" id="sender_phone" type="tel" placeholder="電話番号（必須）" />
         <div class="field-row">
-          <input class="field" id="sender_postal_code" type="text" placeholder="〒（必須）" maxlength="8" />
-          <input class="field" id="sender_address" type="text" placeholder="住所（必須）" />
+          <input class="field" style="margin-bottom:0;" id="sender_postal_code" type="text" placeholder="〒（必須）" maxlength="8" />
+          <input class="field" style="margin-bottom:0;" id="sender_address" type="text" placeholder="住所（必須）" />
         </div>
       </div>
 
-      <!-- 届け先（複数対応） -->
+      <!-- 届け先 -->
       <div class="section-title">届け先・品種・箱サイズ</div>
       <div id="address-list"></div>
       <button class="btn-add-address" type="button" onclick="addAddress()">＋ 届け先を追加する</button>
@@ -131,13 +130,12 @@
 
       <!-- 全体備考 -->
       <div class="section-title">備考・その他ご要望</div>
-      <textarea class="field" id="note" rows="3" placeholder="のし・ギフト包装・比率のご指定など" style="margin-bottom:1.25rem;resize:none;"></textarea>
+      <textarea class="field" id="note" rows="3" placeholder="例）①多め、②③均等　など、のし・ギフト包装のご要望もこちらへ" style="margin-bottom:1.25rem;resize:none;"></textarea>
 
       <div class="error-msg" id="error-msg"></div>
       <button class="submit-btn" id="submit-btn" onclick="submitOrder()">📦 注文を申し込む</button>
     </div>
 
-    <!-- 完了画面 -->
     <div class="complete" id="complete-screen">
       <div class="complete-icon">🍇</div>
       <div class="complete-title">申し込みを受け付けました</div>
@@ -148,6 +146,7 @@
 
   <script>
     const storeSlug = "{{ store.slug }}";
+    // 品種リスト（番号付き）
     const menuItems = [
       {% for item in menu_items %}
       { id: {{ item.id }}, name: "{{ item.name }}" },
@@ -155,24 +154,41 @@
     ];
     let paymentMethod = 'bank';
     let addressCount = 0;
-    // 届け先ごとの状態管理
     const addressState = {};
+
+    const BOX_SIZES = [1, 2, 5];
 
     function addAddress() {
       addressCount++;
       const n = addressCount;
-      addressState[n] = { selectedItems: new Set(), boxSize: 2, boxCount: 1 };
+      // 箱サイズごとの個数を管理
+      addressState[n] = {
+        selectedItems: new Set(),
+        boxes: { 1: 0, 2: 0, 5: 0 },
+      };
 
       const container = document.getElementById('address-list');
       const block = document.createElement('div');
       block.className = 'address-block';
       block.id = 'address-block-' + n;
 
-      // 品種チェックボックスHTML生成
-      const grapeCheckHtml = menuItems.map(item => `
-        <div class="grape-check-item" id="grape-check-${n}-${item.id}" onclick="toggleGrape(${n}, ${item.id})">
-          <div class="grape-check-dot"></div>
+      // 品種チェックリスト（番号付き）
+      const grapeHtml = menuItems.map((item, idx) => `
+        <div class="grape-check-item" id="grape-${n}-${item.id}" onclick="toggleGrape(${n}, ${item.id})">
+          <div class="grape-num">${idx + 1}</div>
           <div class="grape-check-name">${item.name}</div>
+          <div class="grape-check-mark">○</div>
+        </div>
+      `).join('');
+
+      // 箱サイズ行
+      const boxHtml = BOX_SIZES.map(kg => `
+        <div class="box-size-row">
+          <div class="box-size-label">${kg}kg箱</div>
+          <div class="qty-btn" onclick="changeBox(${n}, ${kg}, -1)">−</div>
+          <div class="qty-num" id="box-num-${n}-${kg}">0</div>
+          <div class="qty-btn" onclick="changeBox(${n}, ${kg}, 1)">＋</div>
+          <div class="qty-unit">箱</div>
         </div>
       `).join('');
 
@@ -189,42 +205,30 @@
           <input class="field" style="margin-bottom:0;" id="address_${n}" type="text" placeholder="住所（必須）" />
         </div>
 
-        <div style="font-size:11px;color:#6b3a8a;font-weight:600;letter-spacing:0.06em;margin:10px 0 6px;">品種を選ぶ（複数可）</div>
-        <div class="grape-check-grid">${grapeCheckHtml}</div>
+        <div class="sub-label">品種を選ぶ（複数可）</div>
+        <div class="grape-check-list">${grapeHtml}</div>
 
         <div class="ratio-notice" id="ratio-notice-${n}">
-          💡 2種以上お選びの場合、比率のご希望は下の備考欄にご記入ください（例：シャインマスカット多め、など）
+          💡 2種以上お選びの場合、比率のご希望は下の備考欄にご記入ください<br>
+          例）①多め　②③均等　など番号でお書きいただけます
         </div>
 
-        <div style="font-size:11px;color:#6b3a8a;font-weight:600;letter-spacing:0.06em;margin:10px 0 6px;">箱サイズ</div>
-        <div class="box-size-row" id="box-size-row-${n}">
-          <div class="box-chip" id="box-1-${n}" onclick="selectBox(${n}, 1)">
-            <div class="box-kg">1kg</div><div class="box-label">小箱</div>
-          </div>
-          <div class="box-chip selected" id="box-2-${n}" onclick="selectBox(${n}, 2)">
-            <div class="box-kg">2kg</div><div class="box-label">中箱</div>
-          </div>
-          <div class="box-chip" id="box-5-${n}" onclick="selectBox(${n}, 5)">
-            <div class="box-kg">5kg</div><div class="box-label">大箱</div>
-          </div>
+        <div class="sub-label">箱サイズと数量</div>
+        <div class="box-sizes">${boxHtml}</div>
+
+        <!-- 合計表示 -->
+        <div class="total-box" id="total-box-${n}">
+          <div class="total-label">合計</div>
+          <div class="total-value" id="total-val-${n}">0<span>kg</span></div>
         </div>
 
-        <div class="count-row">
-          <div class="count-label">箱数：</div>
-          <div class="qty-btn" onclick="changeCount(${n}, -1)">−</div>
-          <div class="qty-num" id="count-num-${n}">1</div>
-          <div class="qty-btn" onclick="changeCount(${n}, 1)">＋</div>
-          <div style="font-size:12px;color:#9a6ab0;">箱</div>
-        </div>
-
-        <div style="font-size:11px;color:#6b3a8a;font-weight:600;letter-spacing:0.06em;margin:4px 0 6px;">希望配送日</div>
+        <div class="sub-label">希望配送日</div>
         <input class="field" id="delivery_date_${n}" type="date" style="margin-bottom:8px;" />
 
         <input class="field" id="addr_note_${n}" type="text" placeholder="のし・比率のご希望など（任意）" />
       `;
       container.appendChild(block);
 
-      // 配送日の最小値（翌日以降）
       const tomorrow = new Date();
       tomorrow.setDate(tomorrow.getDate() + 1);
       document.getElementById('delivery_date_' + n).min = tomorrow.toISOString().split('T')[0];
@@ -249,34 +253,34 @@
 
     function toggleGrape(n, itemId) {
       const state = addressState[n];
-      const el = document.getElementById(`grape-check-${n}-${itemId}`);
+      const el = document.getElementById(`grape-${n}-${itemId}`);
+      const mark = el.querySelector('.grape-check-mark');
       if (state.selectedItems.has(itemId)) {
         state.selectedItems.delete(itemId);
         el.classList.remove('checked');
+        mark.textContent = '○';
       } else {
         state.selectedItems.add(itemId);
         el.classList.add('checked');
+        mark.textContent = '✓';
       }
-      // 2種以上でヒント表示
       const notice = document.getElementById(`ratio-notice-${n}`);
       notice.style.display = state.selectedItems.size >= 2 ? 'block' : 'none';
     }
 
-    function selectBox(n, size) {
-      addressState[n].boxSize = size;
-      [1, 2, 5].forEach(s => {
-        const el = document.getElementById(`box-${s}-${n}`);
-        if (el) el.classList.toggle('selected', s === size);
-      });
-    }
-
-    function changeCount(n, delta) {
+    function changeBox(n, kg, delta) {
       const state = addressState[n];
-      state.boxCount = Math.max(1, state.boxCount + delta);
-      document.getElementById('count-num-' + n).textContent = state.boxCount;
+      state.boxes[kg] = Math.max(0, state.boxes[kg] + delta);
+      document.getElementById(`box-num-${n}-${kg}`).textContent = state.boxes[kg];
+      updateTotal(n);
     }
 
-    // 支払チップ
+    function updateTotal(n) {
+      const state = addressState[n];
+      const total = BOX_SIZES.reduce((sum, kg) => sum + kg * state.boxes[kg], 0);
+      document.getElementById(`total-val-${n}`).innerHTML = `${total}<span>kg</span>`;
+    }
+
     document.querySelectorAll('.pay-chip').forEach(chip => {
       chip.addEventListener('click', () => {
         document.querySelectorAll('.pay-chip').forEach(c => c.classList.remove('selected'));
@@ -307,13 +311,12 @@
       if (!customerName || !customerPhone || !customerEmail) return showError('申込者情報を入力してください');
       if (!senderName || !senderPhone || !senderPostal || !senderAddress) return showError('送り主情報を入力してください');
 
-      // 届け先を収集
       const blocks = document.querySelectorAll('.address-block');
       if (blocks.length === 0) return showError('届け先を1件以上追加してください');
 
       const addresses = [];
       for (let i = 0; i < blocks.length; i++) {
-        const id = blocks[i].id.replace('address-block-', '');
+        const id    = blocks[i].id.replace('address-block-', '');
         const state = addressState[parseInt(id)];
         const name         = document.getElementById('receiver_name_' + id)?.value.trim();
         const phone        = document.getElementById('receiver_phone_' + id)?.value.trim() || '';
@@ -326,6 +329,15 @@
         if (!deliveryDate) return showError(`届け先 ${i + 1} の希望配送日を選択してください`);
         if (state.selectedItems.size === 0) return showError(`届け先 ${i + 1} の品種を1つ以上選んでください`);
 
+        const totalKg = BOX_SIZES.reduce((sum, kg) => sum + kg * state.boxes[kg], 0);
+        if (totalKg === 0) return showError(`届け先 ${i + 1} の箱サイズ・数量を選んでください`);
+
+        // 箱の内訳をサマリ文字列で保存（例: "1kg×1箱, 2kg×1箱"）
+        const boxSummary = BOX_SIZES
+          .filter(kg => state.boxes[kg] > 0)
+          .map(kg => `${kg}kg×${state.boxes[kg]}箱`)
+          .join(', ');
+
         addresses.push({
           index: i + 1,
           receiver_name: name,
@@ -333,8 +345,11 @@
           postal_code: postal,
           address: addr,
           delivery_date: deliveryDate,
-          box_size: state.boxSize,
-          box_count: state.boxCount,
+          box_size: BOX_SIZES.find(kg => state.boxes[kg] > 0) || 2, // 後方互換
+          box_count: BOX_SIZES.reduce((sum, kg) => sum + state.boxes[kg], 0),
+          boxes: state.boxes,         // 箱サイズ別内訳
+          box_summary: boxSummary,    // 文字列サマリ
+          total_kg: totalKg,
           item_ids: Array.from(state.selectedItems),
           note: addrNote,
         });
