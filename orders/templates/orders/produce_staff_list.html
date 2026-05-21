@@ -3,277 +3,397 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>予約管理 | {{ store.name }}</title>
+  <title>贈答用ぶどう注文 | {{ store.name }}</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body { background: #f0e8f5; font-family: -apple-system, BlinkMacSystemFont, 'Hiragino Sans', sans-serif; min-height: 100vh; overflow-x: hidden; }
+    .frame { background: #f7f0fa; max-width: 480px; margin: 0 auto; min-height: 100vh; }
 
-    .header { background: #4a1a6e; padding: 1rem 1.25rem; display: flex; align-items: center; justify-content: space-between; }
-    .header-title { color: #f0e0ff; font-size: 16px; font-weight: 500; }
-    .header-sub { color: #c8a8e0; font-size: 11px; margin-top: 2px; }
-    .badge-new { background: #e8331a; color: #fff; border-radius: 50%; width: 22px; height: 22px; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 500; }
+    .header { position: relative; height: 120px; background: #4a1a6e; display: flex; align-items: flex-end; padding: 0 1.25rem 1rem; overflow: hidden; }
+    .header-bg { position: absolute; inset: 0; background-size: cover; background-position: center; opacity: 0.45; }
+    .header-title { position: relative; color: #e8c8f5; font-size: 18px; font-weight: 600; letter-spacing: 0.05em; }
+    .header-sub { position: relative; color: #d4aee8; font-size: 11px; margin-top: 2px; }
 
-    .body { padding: 1rem; max-width: 480px; margin: 0 auto; }
+    .body { padding: 1.25rem; }
 
-    .tab-row { display: flex; gap: 6px; margin-bottom: 1rem; }
-    .tab { flex: 1; padding: 8px 4px; border-radius: 8px; border: 0.5px solid #c9a8d8; background: #fff; text-align: center; font-size: 12px; color: #6b3a8a; cursor: pointer; }
-    .tab.active { background: #4a1a6e; border-color: #4a1a6e; color: #e8c8f5; }
+    .section-title { display: flex; align-items: center; gap: 8px; font-size: 11px; font-weight: 600; color: #6b3a8a; letter-spacing: 0.08em; margin-bottom: 0.75rem; }
+    .section-title::after { content: ''; flex: 1; height: 0.5px; background: #d4aee8; }
 
-    .order-card { background: #fff; border-radius: 12px; border: 0.5px solid #c9a8d8; padding: 1rem; margin-bottom: 10px; }
-    .order-card.status-pending  { border-left: 4px solid #e8a020; }
-    .order-card.status-confirmed { border-left: 4px solid #2d7a4a; }
-    .order-card.status-rejected { border-left: 4px solid #a83030; opacity: 0.6; }
+    .notice { background: #f0ddf7; border-radius: 6px; padding: 7px 10px; font-size: 11px; color: #6b3a8a; margin-bottom: 1rem; border-left: 3px solid #4a1a6e; }
 
-    .type-label { display: inline-block; font-size: 10px; border-radius: 4px; padding: 2px 7px; margin-bottom: 6px; font-weight: 500; }
-    .type-label.visit    { background: #e8f0ff; color: #2a4a9a; }
-    .type-label.delivery { background: #fff0e0; color: #9a5010; }
+    .field { width: 100%; padding: 10px 12px; border: 0.5px solid #c9a8d8; border-radius: 8px; font-size: 16px; background: #fff; margin-bottom: 8px; color: #2d1040; -webkit-appearance: none; }
+    .field:focus { outline: none; border-color: #4a1a6e; }
+    .field::placeholder { color: #b88fd0; }
+    .field-row { display: grid; grid-template-columns: 1fr 2fr; gap: 8px; }
+    .section-box { background: #fff; border: 0.5px solid #c9a8d8; border-radius: 10px; padding: 12px; margin-bottom: 1.25rem; }
 
-    .card-header { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 8px; }
-    .customer-name { font-size: 15px; font-weight: 500; color: #2d1040; }
-    .date-line { font-size: 13px; color: #6b3a8a; margin-top: 2px; }
-    .status-badge { font-size: 11px; border-radius: 6px; padding: 3px 8px; font-weight: 500; white-space: nowrap; }
-    .status-badge.pending   { background: #fef3e0; color: #a86010; }
-    .status-badge.confirmed { background: #e0f5e9; color: #1a5c35; }
-    .status-badge.rejected  { background: #fdf0f0; color: #a83030; }
+    /* 届け先ブロック */
+    .address-block { background: #fff; border: 0.5px solid #c9a8d8; border-radius: 12px; padding: 14px; margin-bottom: 12px; }
+    .address-block-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+    .address-block-title { font-size: 13px; font-weight: 600; color: #4a1a6e; }
+    .btn-remove-address { background: none; border: none; color: #a83030; font-size: 12px; cursor: pointer; padding: 2px 6px; }
 
-    /* 来店注文の品目 */
-    .items-list { background: #f7f0fa; border-radius: 8px; padding: 8px 10px; margin-bottom: 10px; }
-    .item-row { display: flex; justify-content: space-between; font-size: 13px; color: #2d1040; padding: 2px 0; }
-    .item-total { font-size: 13px; font-weight: 500; color: #4a1a6e; border-top: 0.5px solid #d4aee8; margin-top: 4px; padding-top: 4px; text-align: right; }
+    .sub-label { font-size: 11px; color: #6b3a8a; font-weight: 600; letter-spacing: 0.06em; margin: 10px 0 6px; }
 
-    .customer-info { font-size: 12px; color: #6b3a8a; margin-bottom: 10px; line-height: 1.8; }
-    .payment-label { display: inline-block; font-size: 11px; background: #f0ddf7; color: #6b3a8a; border-radius: 4px; padding: 2px 7px; }
+    /* 品種選択（番号付きチェックボックス） */
+    .grape-check-list { display: flex; flex-direction: column; gap: 6px; margin-bottom: 10px; }
+    .grape-check-item { display: flex; align-items: center; gap: 10px; background: #f7f0fa; border: 0.5px solid #c9a8d8; border-radius: 8px; padding: 9px 12px; cursor: pointer; transition: background 0.15s; }
+    .grape-check-item.checked { background: #ede0fa; border-color: #9a6ab0; }
+    .grape-num { width: 22px; height: 22px; border-radius: 50%; background: #d4aee8; color: #4a1a6e; font-size: 11px; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+    .grape-check-item.checked .grape-num { background: #4a1a6e; color: #fff; }
+    .grape-check-name { font-size: 13px; color: #2d1040; font-weight: 500; flex: 1; }
+    .grape-check-mark { font-size: 14px; color: #9a6ab0; }
+    .grape-check-item.checked .grape-check-mark { color: #4a1a6e; font-weight: 700; }
 
-    /* 送り主 */
-    .sender-box { background: #f7f0fa; border-radius: 8px; padding: 8px 10px; margin-bottom: 8px; font-size: 12px; color: #4a1a6e; line-height: 1.8; }
-    .box-label { font-size: 10px; font-weight: 600; color: #9a6ab0; margin-bottom: 3px; letter-spacing: 0.05em; }
+    /* 比率ヒント */
+    .ratio-notice { background: #fef9e8; border: 0.5px solid #e8d888; border-radius: 6px; padding: 7px 10px; font-size: 11px; color: #6b5010; margin-bottom: 10px; display: none; }
 
-    /* 届け先カード */
-    .address-card { background: #fff8f0; border: 0.5px solid #e8c8a0; border-radius: 10px; padding: 10px 12px; margin-bottom: 8px; }
-    .address-card-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
-    .address-num { font-size: 11px; font-weight: 600; color: #9a5010; }
-    .address-date { font-size: 11px; color: #9a5010; }
-    .address-name { font-size: 14px; font-weight: 500; color: #2d1040; margin-bottom: 3px; }
-    .address-info { font-size: 12px; color: #5a3010; line-height: 1.7; margin-bottom: 6px; }
-    /* 品種タグ */
-    .grape-tags { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 6px; }
-    .grape-tag { font-size: 11px; background: #4a1a6e; color: #e8c8f5; border-radius: 4px; padding: 2px 8px; }
-    /* 箱サイズ表示 */
-    .box-info { display: inline-block; font-size: 12px; font-weight: 600; color: #9a5010; background: #fde8c0; border-radius: 6px; padding: 3px 10px; margin-bottom: 4px; }
-    .addr-note { font-size: 11px; color: #888; margin-top: 4px; }
+    /* 箱サイズ・箱数 */
+    .box-sizes { display: flex; flex-direction: column; gap: 8px; margin-bottom: 10px; }
+    .box-size-row { display: flex; align-items: center; gap: 10px; }
+    .box-size-label { font-size: 12px; font-weight: 600; color: #4a1a6e; width: 52px; flex-shrink: 0; }
+    .qty-btn { width: 28px; height: 28px; border-radius: 50%; border: 0.5px solid #c9a8d8; background: #f0ddf7; display: flex; align-items: center; justify-content: center; font-size: 16px; color: #4a1a6e; cursor: pointer; user-select: none; flex-shrink: 0; }
+    .qty-num { font-size: 15px; font-weight: 600; color: #2d1040; min-width: 20px; text-align: center; }
+    .qty-unit { font-size: 12px; color: #9a6ab0; }
 
-    .note-box { background: #f0f0f0; border-radius: 6px; padding: 6px 10px; font-size: 12px; color: #444; margin-bottom: 10px; }
+    /* 合計表示 */
+    .total-box { background: #4a1a6e; border-radius: 8px; padding: 8px 12px; margin-bottom: 10px; display: flex; align-items: center; justify-content: space-between; }
+    .total-box .total-label { font-size: 11px; color: #d4aee8; }
+    .total-box .total-value { font-size: 16px; font-weight: 700; color: #fff; }
+    .total-box .total-value span { font-size: 11px; font-weight: 400; color: #d4aee8; margin-left: 2px; }
 
-    .action-row { display: flex; gap: 8px; }
-    .btn-ok { flex: 1; background: #2d5a3d; color: #c8f0d8; border: none; border-radius: 8px; padding: 10px; font-size: 13px; font-weight: 500; cursor: pointer; }
-    .btn-ng { flex: 1; background: #fff; color: #a83030; border: 0.5px solid #e8b0b0; border-radius: 8px; padding: 10px; font-size: 13px; cursor: pointer; }
-    .btn-ok:disabled, .btn-ng:disabled { opacity: 0.4; cursor: not-allowed; }
+    .btn-add-address { width: 100%; padding: 11px; border-radius: 8px; border: 1px dashed #c9a8d8; background: #f7f0fa; color: #6b3a8a; font-size: 13px; cursor: pointer; margin-bottom: 1.25rem; }
 
-    .empty { text-align: center; padding: 3rem 1rem; color: #9a6ab0; font-size: 14px; }
-    .toast { position: fixed; top: 1rem; left: 50%; transform: translateX(-50%); background: #4a1a6e; color: #e8c8f5; padding: 10px 20px; border-radius: 10px; font-size: 13px; display: none; z-index: 999; white-space: nowrap; }
-    .toast.show { display: block; }
-    .refresh-info { text-align: center; font-size: 11px; color: #9a6ab0; margin-bottom: 1rem; }
+    .pay-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin-bottom: 1.25rem; }
+    .pay-chip { padding: 9px; border-radius: 8px; border: 0.5px solid #c9a8d8; background: #fff; text-align: center; font-size: 12px; color: #6b3a8a; cursor: pointer; }
+    .pay-chip.selected { background: #4a1a6e; border-color: #4a1a6e; color: #e8c8f5; }
+
+    .submit-btn { width: 100%; background: #4a1a6e; color: #e8c8f5; border: none; border-radius: 10px; padding: 14px; font-size: 15px; font-weight: 500; cursor: pointer; -webkit-appearance: none; }
+    .submit-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    .error-msg { background: #fdf0f0; border: 0.5px solid #e8b0b0; border-radius: 6px; padding: 8px 12px; font-size: 12px; color: #a83030; margin-bottom: 1rem; display: none; }
+
+    .complete { display: none; text-align: center; padding: 2.5rem 1rem; }
+    .complete-icon { font-size: 48px; margin-bottom: 1rem; }
+    .complete-title { font-size: 18px; font-weight: 600; color: #4a1a6e; margin-bottom: 0.75rem; }
+    .complete-text { font-size: 13px; color: #6b3a8a; line-height: 1.8; }
   </style>
 </head>
 <body>
-
-<div class="header">
-  <div>
-    <div class="header-title">🍇 {{ store.name }} 予約管理</div>
-    <div class="header-sub">30秒ごとに自動更新</div>
-  </div>
-  {% if pending_count > 0 %}
-  <div class="badge-new">{{ pending_count }}</div>
-  {% endif %}
-</div>
-
-<div class="body">
-  <div class="tab-row">
-    <div class="tab active" id="tab-pending"  onclick="switchTab('pending')">未確認 ({{ pending_count }})</div>
-    <div class="tab" id="tab-visit"    onclick="switchTab('visit')">🚶 来店</div>
-    <div class="tab" id="tab-delivery" onclick="switchTab('delivery')">📦 配送</div>
-    <div class="tab" id="tab-all"      onclick="switchTab('all')">すべて</div>
-  </div>
-
-  <div class="refresh-info">次回更新まで <span id="countdown">30</span> 秒</div>
-
-  <div id="orders-container">
-    {% for order in orders %}
-    <div class="order-card status-{{ order.status }}"
-         id="card-{{ order.id }}"
-         data-status="{{ order.status }}"
-         data-type="{{ order.order_type }}">
-
-      {% if order.order_type == 'delivery' %}
-      <div class="type-label delivery">📦 贈答・配送</div>
-      {% else %}
-      <div class="type-label visit">🚶 来店受取</div>
-      {% endif %}
-
-      <div class="card-header">
-        <div>
-          <div class="customer-name">{{ order.customer_name }}</div>
-          {% if order.order_type == 'visit' %}
-          <div class="date-line">📅 来店予定日：{{ order.visit_date|date:"m月d日（D）" }}</div>
-          {% endif %}
-        </div>
-        <div class="status-badge {{ order.status }}">
-          {% if order.status == 'pending' %}未確認
-          {% elif order.status == 'confirmed' %}OK
-          {% elif order.status == 'rejected' %}お断り
-          {% endif %}
-        </div>
+  <div class="frame">
+    <div class="header">
+      <div class="header-bg" style="background-image: url('https://res.cloudinary.com/dgxnatvsw/image/upload/v1779144796/%E8%97%A4%E7%A8%94%E3%82%8A_800_x_600_px_f6k4hn.jpg');"></div>
+      <div>
+        <div class="header-title">🍇 贈答用ぶどう注文</div>
+        <div class="header-sub">{{ store.name }}</div>
       </div>
+    </div>
 
-      <!-- 来店注文の品目 -->
-      {% if order.order_type == 'visit' %}
-      <div class="items-list">
-        {% for item in order.produce_items.all %}
-        <div class="item-row">
-          <span>{{ item.menu_item.name }}</span>
-          <span>{{ item.quantity }}{{ item.menu_item.unit }}</span>
-        </div>
-        {% endfor %}
+    <div class="body" id="order-form">
+      <div class="notice">
+        ご注文後、オーナーが在庫を確認してからご連絡いたします。<br>
+        確認後に決済方法をご案内します。
       </div>
-      {% endif %}
 
       <!-- 申込者情報 -->
-      <div class="customer-info">
-        📞 {{ order.customer_phone }}<br>
-        ✉️ {{ order.customer_email }}<br>
-        <span class="payment-label">{{ order.get_payment_method_display }}</span>
+      <div class="section-title">申込者情報</div>
+      <div class="section-box">
+        <input class="field" id="customer_name" type="text" placeholder="お名前（必須）" autocomplete="name" />
+        <input class="field" id="customer_phone" type="tel" placeholder="電話番号（必須）" autocomplete="tel" />
+        <input class="field" id="customer_email" type="email" placeholder="メールアドレス（必須）" autocomplete="email" />
       </div>
 
-      <!-- 配送：送り主 + 届け先（品種・箱サイズ付き） -->
-      {% if order.order_type == 'delivery' %}
-        <div class="sender-box">
-          <div class="box-label">送り主</div>
-          {{ order.sender_name }}　{{ order.sender_phone }}<br>
-          〒{{ order.sender_postal_code }}　{{ order.sender_address }}
+      <!-- 送り主情報 -->
+      <div class="section-title">送り主情報</div>
+      <div class="section-box">
+        <input class="field" id="sender_name" type="text" placeholder="氏名（必須）" />
+        <input class="field" id="sender_phone" type="tel" placeholder="電話番号（必須）" />
+        <div class="field-row">
+          <input class="field" style="margin-bottom:0;" id="sender_postal_code" type="text" placeholder="〒（必須）" maxlength="8" />
+          <input class="field" style="margin-bottom:0;" id="sender_address" type="text" placeholder="住所（必須）" />
         </div>
-
-        {% with addrs=order.delivery_addresses.all %}
-        {% if addrs %}
-        <div class="box-label" style="color:#9a5010;margin-bottom:6px;">届け先（{{ addrs|length }}件）</div>
-        {% for addr in addrs %}
-        <div class="address-card">
-          <div class="address-card-header">
-            <div class="address-num">届け先 {{ addr.index }}</div>
-            <div class="address-date">🚚 {{ addr.delivery_date|date:"m月d日" }}</div>
-          </div>
-          <div class="address-name">{{ addr.receiver_name }}{% if addr.receiver_phone %}　{{ addr.receiver_phone }}{% endif %}</div>
-          <div class="address-info">{% if addr.postal_code %}〒{{ addr.postal_code }}　{% endif %}{{ addr.address }}</div>
-          <!-- 品種タグ -->
-          <div class="grape-tags">
-            {% for gi in addr.items.all %}
-            <span class="grape-tag">{{ gi.menu_item.name }}</span>
-            {% endfor %}
-          </div>
-          <!-- 箱サイズ・箱数 -->
-          <div class="box-info">{{ addr.box_size }}kg箱 × {{ addr.box_count }}箱</div>
-          {% if addr.note %}<div class="addr-note">📝 {{ addr.note }}</div>{% endif %}
-        </div>
-        {% endfor %}
-        {% endif %}
-        {% endwith %}
-      {% endif %}
-
-      {% if order.note %}
-      <div class="note-box">📝 {{ order.note }}</div>
-      {% endif %}
-
-      {% if order.status == 'pending' %}
-      <div class="action-row">
-        <button class="btn-ok" onclick="doAction({{ order.id }}, 'confirmed')">✅ OK・受け付ける</button>
-        <button class="btn-ng" onclick="doAction({{ order.id }}, 'rejected')">❌ お断り</button>
       </div>
-      {% endif %}
+
+      <!-- 届け先 -->
+      <div class="section-title">届け先・品種・箱サイズ</div>
+      <div id="address-list"></div>
+      <button class="btn-add-address" type="button" onclick="addAddress()">＋ 届け先を追加する</button>
+
+      <!-- 支払方法 -->
+      <div class="section-title">お支払方法</div>
+      <div class="pay-grid">
+        <div class="pay-chip selected" data-pay="bank">🏦 銀行振込</div>
+        <div class="pay-chip" data-pay="paypay">📱 PayPay</div>
+        <div class="pay-chip" data-pay="stripe">💳 クレジット</div>
+        <div class="pay-chip" data-pay="cash">💴 現金（来店）</div>
+      </div>
+
+      <!-- 全体備考 -->
+      <div class="section-title">備考・その他ご要望</div>
+      <textarea class="field" id="note" rows="3" placeholder="例）①多め、②③均等　など、のし・ギフト包装のご要望もこちらへ" style="margin-bottom:1.25rem;resize:none;"></textarea>
+
+      <div class="error-msg" id="error-msg"></div>
+      <button class="submit-btn" id="submit-btn" onclick="submitOrder()">📦 注文を申し込む</button>
     </div>
-    {% empty %}
-    <div class="empty">予約・注文はまだありません</div>
-    {% endfor %}
+
+    <div class="complete" id="complete-screen">
+      <div class="complete-icon">🍇</div>
+      <div class="complete-title">申し込みを受け付けました</div>
+      <p class="complete-text">オーナーが在庫を確認後、<br>メールにてお支払方法をご連絡いたします。<br><br>しばらくお待ちください。</p>
+      <button class="submit-btn" style="margin-top:1.5rem;" onclick="location.reload()">🍇 最初に戻る</button>
+    </div>
   </div>
-</div>
 
-<div class="toast" id="toast"></div>
+  <script>
+    const storeSlug = "{{ store.slug }}";
+    // 品種リスト（番号付き）
+    const menuItems = [
+      {% for item in menu_items %}
+      { id: {{ item.id }}, name: "{{ item.name }}" },
+      {% endfor %}
+    ];
+    let paymentMethod = 'bank';
+    let addressCount = 0;
+    const addressState = {};
 
-<script>
-  let currentTab = 'pending';
+    const BOX_SIZES = [1, 2, 5];
 
-  function switchTab(tab) {
-    currentTab = tab;
-    ['pending', 'visit', 'delivery', 'all'].forEach(t => {
-      document.getElementById('tab-' + t).className = 'tab' + (t === tab ? ' active' : '');
-    });
-    document.querySelectorAll('.order-card').forEach(card => {
-      const status = card.dataset.status;
-      const type   = card.dataset.type;
-      let show = false;
-      if (tab === 'all')           show = true;
-      else if (tab === 'pending')  show = status === 'pending';
-      else if (tab === 'visit')    show = type === 'visit';
-      else if (tab === 'delivery') show = type === 'delivery';
-      card.style.display = show ? 'block' : 'none';
-    });
-  }
-  switchTab('pending');
+    function addAddress() {
+      addressCount++;
+      const n = addressCount;
+      // 箱サイズごとの個数を管理
+      addressState[n] = {
+        selectedItems: new Set(),
+        boxes: { 1: 0, 2: 0, 5: 0 },
+      };
 
-  function doAction(orderId, action) {
-    const card = document.getElementById('card-' + orderId);
-    card.querySelectorAll('button').forEach(b => b.disabled = true);
-    fetch('/orders/produce/staff/action/', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken') },
-      body: JSON.stringify({ order_id: orderId, action }),
-    })
-    .then(r => r.json())
-    .then(data => {
-      if (data.success) {
-        showToast(action === 'confirmed' ? '✅ 受け付けました。メールを送信しました。' : '❌ お断りメールを送信しました。');
-        setTimeout(() => location.reload(), 1500);
+      const container = document.getElementById('address-list');
+      const block = document.createElement('div');
+      block.className = 'address-block';
+      block.id = 'address-block-' + n;
+
+      // 品種チェックリスト（番号付き）
+      const grapeHtml = menuItems.map((item, idx) => `
+        <div class="grape-check-item" id="grape-${n}-${item.id}" onclick="toggleGrape(${n}, ${item.id})">
+          <div class="grape-num">${idx + 1}</div>
+          <div class="grape-check-name">${item.name}</div>
+          <div class="grape-check-mark">○</div>
+        </div>
+      `).join('');
+
+      // 箱サイズ行
+      const boxHtml = BOX_SIZES.map(kg => `
+        <div class="box-size-row">
+          <div class="box-size-label">${kg}kg箱</div>
+          <div class="qty-btn" onclick="changeBox(${n}, ${kg}, -1)">−</div>
+          <div class="qty-num" id="box-num-${n}-${kg}">0</div>
+          <div class="qty-btn" onclick="changeBox(${n}, ${kg}, 1)">＋</div>
+          <div class="qty-unit">箱</div>
+        </div>
+      `).join('');
+
+      block.innerHTML = `
+        <div class="address-block-header">
+          <div class="address-block-title">届け先 ${n}</div>
+          ${n > 1 ? `<button class="btn-remove-address" type="button" onclick="removeAddress(${n})">✕ 削除</button>` : ''}
+        </div>
+
+        <input class="field" id="receiver_name_${n}" type="text" placeholder="氏名（必須）" />
+        <input class="field" id="receiver_phone_${n}" type="tel" placeholder="電話番号" />
+        <div class="field-row" style="margin-bottom:8px;">
+          <input class="field" style="margin-bottom:0;" id="postal_code_${n}" type="text" placeholder="〒" maxlength="8" />
+          <input class="field" style="margin-bottom:0;" id="address_${n}" type="text" placeholder="住所（必須）" />
+        </div>
+
+        <div class="sub-label">品種を選ぶ（複数可）</div>
+        <div class="grape-check-list">${grapeHtml}</div>
+
+        <div class="ratio-notice" id="ratio-notice-${n}">
+          💡 2種以上お選びの場合、比率のご希望は下の備考欄にご記入ください<br>
+          例）①多め　②③均等　など番号でお書きいただけます
+        </div>
+
+        <div class="sub-label">箱サイズと数量</div>
+        <div class="box-sizes">${boxHtml}</div>
+
+        <!-- 合計表示 -->
+        <div class="total-box" id="total-box-${n}">
+          <div class="total-label">合計</div>
+          <div class="total-value" id="total-val-${n}">0<span>kg</span></div>
+        </div>
+
+        <div class="sub-label">希望配送日</div>
+        <input class="field" id="delivery_date_${n}" type="date" style="margin-bottom:8px;" />
+
+        <input class="field" id="addr_note_${n}" type="text" placeholder="のし・比率のご希望など（任意）" />
+      `;
+      container.appendChild(block);
+
+      const tomorrow = new Date();
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      document.getElementById('delivery_date_' + n).min = tomorrow.toISOString().split('T')[0];
+
+      renumberAddresses();
+    }
+
+    function removeAddress(n) {
+      const block = document.getElementById('address-block-' + n);
+      if (block) block.remove();
+      delete addressState[n];
+      renumberAddresses();
+    }
+
+    function renumberAddresses() {
+      const blocks = document.querySelectorAll('.address-block');
+      blocks.forEach((block, i) => {
+        const title = block.querySelector('.address-block-title');
+        if (title) title.textContent = `届け先 ${i + 1}`;
+      });
+    }
+
+    function toggleGrape(n, itemId) {
+      const state = addressState[n];
+      const el = document.getElementById(`grape-${n}-${itemId}`);
+      const mark = el.querySelector('.grape-check-mark');
+      if (state.selectedItems.has(itemId)) {
+        state.selectedItems.delete(itemId);
+        el.classList.remove('checked');
+        mark.textContent = '○';
       } else {
-        showToast('エラーが発生しました');
-        card.querySelectorAll('button').forEach(b => b.disabled = false);
+        state.selectedItems.add(itemId);
+        el.classList.add('checked');
+        mark.textContent = '✓';
       }
+      const notice = document.getElementById(`ratio-notice-${n}`);
+      notice.style.display = state.selectedItems.size >= 2 ? 'block' : 'none';
+    }
+
+    function changeBox(n, kg, delta) {
+      const state = addressState[n];
+      state.boxes[kg] = Math.max(0, state.boxes[kg] + delta);
+      document.getElementById(`box-num-${n}-${kg}`).textContent = state.boxes[kg];
+      updateTotal(n);
+    }
+
+    function updateTotal(n) {
+      const state = addressState[n];
+      const total = BOX_SIZES.reduce((sum, kg) => sum + kg * state.boxes[kg], 0);
+      document.getElementById(`total-val-${n}`).innerHTML = `${total}<span>kg</span>`;
+    }
+
+    document.querySelectorAll('.pay-chip').forEach(chip => {
+      chip.addEventListener('click', () => {
+        document.querySelectorAll('.pay-chip').forEach(c => c.classList.remove('selected'));
+        chip.classList.add('selected');
+        paymentMethod = chip.dataset.pay;
+      });
     });
-  }
 
-  function showToast(msg) {
-    const t = document.getElementById('toast');
-    t.textContent = msg;
-    t.classList.add('show');
-    setTimeout(() => t.classList.remove('show'), 3000);
-  }
+    function showError(msg) {
+      const el = document.getElementById('error-msg');
+      el.textContent = msg;
+      el.style.display = 'block';
+      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
 
-  let countdown = 30;
-  setInterval(() => {
-    countdown--;
-    document.getElementById('countdown').textContent = countdown;
-    if (countdown <= 0) location.reload();
-  }, 1000);
+    async function submitOrder() {
+      document.getElementById('error-msg').style.display = 'none';
 
-  function playBeep() {
-    try {
-      const ctx = new (window.AudioContext || window.webkitAudioContext)();
-      const o = ctx.createOscillator();
-      const g = ctx.createGain();
-      o.connect(g); g.connect(ctx.destination);
-      o.frequency.value = 880;
-      g.gain.setValueAtTime(0.3, ctx.currentTime);
-      g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.5);
-      o.start(ctx.currentTime); o.stop(ctx.currentTime + 0.5);
-    } catch(e) {}
-  }
+      const customerName  = document.getElementById('customer_name').value.trim();
+      const customerPhone = document.getElementById('customer_phone').value.trim();
+      const customerEmail = document.getElementById('customer_email').value.trim();
+      const senderName    = document.getElementById('sender_name').value.trim();
+      const senderPhone   = document.getElementById('sender_phone').value.trim();
+      const senderPostal  = document.getElementById('sender_postal_code').value.trim();
+      const senderAddress = document.getElementById('sender_address').value.trim();
+      const note          = document.getElementById('note').value.trim();
 
-  const newCount  = {{ pending_count }};
-  const lastCount = parseInt(sessionStorage.getItem('lastPendingCount') || '0');
-  if (newCount > lastCount) { playBeep(); }
-  sessionStorage.setItem('lastPendingCount', newCount);
+      if (!customerName || !customerPhone || !customerEmail) return showError('申込者情報を入力してください');
+      if (!senderName || !senderPhone || !senderPostal || !senderAddress) return showError('送り主情報を入力してください');
 
-  function getCookie(name) {
-    const v = document.cookie.match('(^|;) ?' + name + '=([^;]*)(;|$)');
-    return v ? v[2] : '';
-  }
-</script>
+      const blocks = document.querySelectorAll('.address-block');
+      if (blocks.length === 0) return showError('届け先を1件以上追加してください');
+
+      const addresses = [];
+      for (let i = 0; i < blocks.length; i++) {
+        const id    = blocks[i].id.replace('address-block-', '');
+        const state = addressState[parseInt(id)];
+        const name         = document.getElementById('receiver_name_' + id)?.value.trim();
+        const phone        = document.getElementById('receiver_phone_' + id)?.value.trim() || '';
+        const postal       = document.getElementById('postal_code_' + id)?.value.trim() || '';
+        const addr         = document.getElementById('address_' + id)?.value.trim();
+        const deliveryDate = document.getElementById('delivery_date_' + id)?.value || '';
+        const addrNote     = document.getElementById('addr_note_' + id)?.value.trim() || '';
+
+        if (!name || !addr) return showError(`届け先 ${i + 1} の氏名と住所を入力してください`);
+        if (!deliveryDate) return showError(`届け先 ${i + 1} の希望配送日を選択してください`);
+        if (state.selectedItems.size === 0) return showError(`届け先 ${i + 1} の品種を1つ以上選んでください`);
+
+        const totalKg = BOX_SIZES.reduce((sum, kg) => sum + kg * state.boxes[kg], 0);
+        if (totalKg === 0) return showError(`届け先 ${i + 1} の箱サイズ・数量を選んでください`);
+
+        // 箱の内訳をサマリ文字列で保存（例: "1kg×1箱, 2kg×1箱"）
+        const boxSummary = BOX_SIZES
+          .filter(kg => state.boxes[kg] > 0)
+          .map(kg => `${kg}kg×${state.boxes[kg]}箱`)
+          .join(', ');
+
+        addresses.push({
+          index: i + 1,
+          receiver_name: name,
+          receiver_phone: phone,
+          postal_code: postal,
+          address: addr,
+          delivery_date: deliveryDate,
+          box_size: BOX_SIZES.find(kg => state.boxes[kg] > 0) || 2, // 後方互換
+          box_count: BOX_SIZES.reduce((sum, kg) => sum + state.boxes[kg], 0),
+          boxes: state.boxes,         // 箱サイズ別内訳
+          box_summary: boxSummary,    // 文字列サマリ
+          total_kg: totalKg,
+          item_ids: Array.from(state.selectedItems),
+          note: addrNote,
+        });
+      }
+
+      const btn = document.getElementById('submit-btn');
+      btn.disabled = true;
+      btn.textContent = '送信中...';
+
+      try {
+        const res = await fetch(`/${storeSlug}/delivery/order/`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'X-CSRFToken': '{{ csrf_token }}' },
+          body: JSON.stringify({
+            customer_name: customerName,
+            customer_phone: customerPhone,
+            customer_email: customerEmail,
+            sender_name: senderName,
+            sender_phone: senderPhone,
+            sender_postal_code: senderPostal,
+            sender_address: senderAddress,
+            payment_method: paymentMethod,
+            note,
+            addresses,
+          }),
+        });
+        const data = await res.json();
+        if (data.success) {
+          document.getElementById('order-form').style.display = 'none';
+          document.getElementById('complete-screen').style.display = 'block';
+        } else {
+          showError(data.error || '送信に失敗しました');
+          btn.disabled = false;
+          btn.textContent = '📦 注文を申し込む';
+        }
+      } catch (e) {
+        showError('通信エラーが発生しました。もう一度お試しください。');
+        btn.disabled = false;
+        btn.textContent = '📦 注文を申し込む';
+      }
+    }
+
+    // 最初から1件表示
+    addAddress();
+  </script>
 </body>
 </html>
