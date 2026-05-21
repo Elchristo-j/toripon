@@ -17,6 +17,10 @@ class MenuCategory(models.Model):
         verbose_name = 'メニューカテゴリ'
         verbose_name_plural = 'メニューカテゴリ'
 
+    @property
+    def total_kg(self):
+        return self.box_size * self.box_count
+        
     def __str__(self):
         return f'{self.store.name} / {self.name}'
 
