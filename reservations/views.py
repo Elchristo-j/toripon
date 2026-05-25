@@ -166,40 +166,9 @@ def staff_floor_map(request):
         'seats'
     ).order_by('sort_order')
 
-    sections_data = []
-    for section in sections:
-        seats_data = []
-        for seat in section.seats.filter(is_active=True).order_by('sort_order'):
-            info = seat_status.get(seat.pk)
-
-
-
-@login_required
-def staff_floor_map(request):
-    from datetime import date
-    store = Store.objects.get(slug='itadaki')
-    today = date.today()
-
-    # 今日の確定・着席中の予約を取得
-    active_reservations = Reservation.objects.filter(
-        store=store,
-        start_at__date=today,
-        status__in=['confirmed', 'seated'],
-    ).prefetch_related('reservation_seats__seat')
-
-    # 席ごとのステータスを辞書で作成
-    seat_status = {}  # seat.pk -> [{'status': ..., 'reservation': ...}, ...]
-    for r in active_reservations:
-        for rs in r.reservation_seats.all():
-            seat_status.setdefault(rs.seat.pk, []).append({
-                'status': r.status,
-                'reservation': r,
-            })
-
-    # セクション別に席を整理
-    sections = SeatSection.objects.filter(store=store).prefetch_related(
-        'seats'
-    ).order_by('sort_order')
+    # BUG FIX: 以前はここで不完全な実装が途中で終わっており（return文なし）、
+    # 直後に同名の staff_floor_map が再定義されていた（重複定義）。
+    # 不完全な最初の定義を削除し、完全な実装のみ残す。
 
     sections_data = []
     for section in sections:

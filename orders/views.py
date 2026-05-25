@@ -289,11 +289,16 @@ def produce_staff_action(request):
                 f'{store_name}'
             )
 
-    try:
-        send_mail(subject, message, settings.DEFAULT_FROM_EMAIL,
-                  [order.customer_email], fail_silently=True)
-    except Exception:
-        pass
+    # BUG FIX: fail_silently=True + except pass でエラーが完全に隠れていた。
+    # メール送信失敗はログに記録し、レスポンス自体は成功として返す。
+    import logging
+    logger = logging.getLogger(__name__)
+    if order.customer_email:
+        try:
+            send_mail(subject, message, settings.DEFAULT_FROM_EMAIL,
+                      [order.customer_email], fail_silently=False)
+        except Exception as mail_err:
+            logger.error(f'メール送信失敗 order_id={order_id}: {mail_err}')
 
     return JsonResponse({'success': True})
 

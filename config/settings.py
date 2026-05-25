@@ -167,6 +167,30 @@ CSRF_TRUSTED_ORIGINS = [
     'https://toripon.el-christo.online',
 ]
 
-# メール設定（開発中：コンソール出力）
-EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
-DEFAULT_FROM_EMAIL = 'noreply@el-christo.online'
+# ── メール設定 ────────────────────────────────────────────────────
+# BUG FIX: コンソールバックエンドのみだったため本番でメールが送信されなかった。
+# 環境変数 EMAIL_HOST_PASSWORD（Resend の SMTP トークン）があれば SMTP で送信。
+# なければ開発用のコンソール出力にフォールバック。
+#
+# Resend SMTP 設定方法:
+#   EMAIL_HOST=smtp.resend.com
+#   EMAIL_HOST_USER=resend
+#   EMAIL_HOST_PASSWORD=re_xxxxxxxxxxxx  ← Resend API キー
+#   EMAIL_PORT=465
+#   EMAIL_USE_SSL=True
+#   DEFAULT_FROM_EMAIL=onboarding@resend.dev（または確認済みドメイン）
+
+_resend_password = os.environ.get('EMAIL_HOST_PASSWORD', '')
+if _resend_password:
+    EMAIL_BACKEND    = 'django.core.mail.backends.smtp.EmailBackend'
+    EMAIL_HOST       = os.environ.get('EMAIL_HOST', 'smtp.resend.com')
+    EMAIL_PORT       = int(os.environ.get('EMAIL_PORT', '465'))
+    EMAIL_HOST_USER  = os.environ.get('EMAIL_HOST_USER', 'resend')
+    EMAIL_HOST_PASSWORD = _resend_password
+    EMAIL_USE_SSL    = os.environ.get('EMAIL_USE_SSL', 'True') == 'True'
+    EMAIL_USE_TLS    = False
+else:
+    # 開発環境 or 未設定: コンソール出力
+    EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+
+DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL', 'noreply@el-christo.online')

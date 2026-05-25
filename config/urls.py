@@ -12,5 +12,7 @@ urlpatterns = [
     path('reservations/', include('reservations.urls')),
     path('accounts/', include('accounts.urls')),
     path('orders/', include('orders.urls')),
+    # BUG FIX: Stripe Webhook ルートを追加（以前は登録なし）
+    path('payments/', include('payments.urls')),
     path('<str:store_slug>/', include('orders.store_urls')),
 ]
